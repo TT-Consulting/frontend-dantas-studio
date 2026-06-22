@@ -1,19 +1,35 @@
-import { useState } from 'react';
-import { Calendar, Clock, Users, MapPin, Phone, Plus, Search, Edit2, UserX, Settings, X, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, Clock, Users, MapPin, Phone, Plus, Search, Edit2, UserX, Settings, X, AlertTriangle, Loader } from 'lucide-react';
 import { DollarSign } from 'lucide-react';
+import { listarServicosAtivos, listarHorarioComercial, listarClientes, salvarCliente, atualizarCliente } from '../../api';
 
-export function HomeScreen({ 
-  onServiceCatalogClick, 
-  onAutomationClick, 
-  onProcessFlowClick 
+export function HomeScreen({
+  onServiceCatalogClick,
+  onAutomationClick,
+  onProcessFlowClick,
+  onSettingsClick,
+  onLogout,
 }) {
-  const [activeTab, setActiveTab] = useState('agenda');
+  // State: Clients
+  const [clients, setClients] = useState([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientsError, setClientsError] = useState(null);
+
+  const [services, setServices] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [servicesError, setServicesError] = useState(null);
+
+  const [businessHours, setBusinessHours] = useState([]);
+  const [businessHoursLoading, setBusinessHoursLoading] = useState(false);
+
+  // State: Clients Tab
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // State: Appointments
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
   const [newAppointment, setNewAppointment] = useState({
     service: '',
     location: 'Studio',
@@ -21,168 +37,216 @@ export function HomeScreen({
     time: '',
     clientId: '',
   });
+  const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
 
+  // State: UI
+  const [activeTab, setActiveTab] = useState('agenda');
+
+  // Stub data for appointments (will be replaced with API)
   const todayAppointments = [
     {
       id: '1',
-      time: '10:00',
       client: 'Maria Silva',
-      service: 'Manicure Clássica',
-      duration: '45 min',
-      status: 'confirmed',
+      service: 'Manicure Premium',
+      time: '10:00',
+      duration: '45min',
       phone: '+55 11 98765-4321',
-      location: 'Studio - Rua Principal, 123',
-      serviceType: 'Studio',
-      price: 'R$ 60',
       email: 'maria@email.com',
-      // Anamnese da cliente
-      allergies: 'Alergia a acetona',
-      healthConditions: 'Diabetes tipo 2',
-      ingrowingNails: 'sim',
-      sensitivity: 'Alta',
-      fungus: 'não',
-    },
-    {
-      id: '2',
-      time: '14:00',
-      client: 'Ana Costa',
-      service: 'Alongamento em Gel',
-      duration: '90 min',
-      status: 'pending',
-      phone: '+55 11 97654-3210',
-      location: 'Atendimento a Domicílio - Rua das Flores, 456',
-      serviceType: 'Domicílio',
+      status: 'confirmed',
       price: 'R$ 120',
-      email: 'ana@email.com',
-      allergies: 'Nenhuma',
-      healthConditions: 'Nenhuma',
-      ingrowingNails: 'não',
-      sensitivity: 'Normal',
-      fungus: 'não',
-    },
-    {
-      id: '3',
-      time: '16:30',
-      client: 'Julia Santos',
-      service: 'Nail Art Premium',
-      duration: '120 min',
-      status: 'confirmed',
-      phone: '+55 11 96543-2109',
-      location: 'Studio - Rua Principal, 123',
-      serviceType: 'Studio',
-      price: 'R$ 150',
-      email: 'julia@email.com',
-      allergies: 'Alergia a níquel',
-      healthConditions: 'Hipertensão',
-      ingrowingNails: 'não',
-      sensitivity: 'Média',
-      fungus: 'sim',
-    },
-  ];
-
-  const clients = [
-    {
-      id: '1',
-      name: 'Maria Silva',
-      phone: '+55 11 98765-4321',
-      email: 'maria@email.com',
-      status: 'active',
-      lastVisit: '2025-12-15',
-      totalVisits: 12,
-      // Dados de Cadastro
-      whatsapp: '+55 11 98765-4321',
-      birthDate: '1990-05-15',
-      gender: 'Feminino',
-      // Dados de Anamnese
+      location: 'Studio',
       allergies: 'Alergia a acetona',
       healthConditions: 'Diabetes tipo 2',
-      ingrowingNails: 'sim',
-      sensitivity: 'Alta',
-      fungus: 'não',
     },
     {
       id: '2',
-      name: 'Ana Costa',
+      client: 'Ana Costa',
+      service: 'Pedicure',
+      time: '11:00',
+      duration: '1h',
       phone: '+55 11 97654-3210',
       email: 'ana@email.com',
-      status: 'active',
-      lastVisit: '2025-12-10',
-      totalVisits: 8,
-      whatsapp: '+55 11 97654-3210',
-      birthDate: '1995-08-22',
-      gender: 'Feminino',
+      status: 'pending',
+      price: 'R$ 100',
+      location: 'Studio',
       allergies: 'Nenhuma',
       healthConditions: 'Nenhuma',
-      ingrowingNails: 'não',
-      sensitivity: 'Normal',
-      fungus: 'não',
-    },
-    {
-      id: '3',
-      name: 'Julia Santos',
-      phone: '+55 11 96543-2109',
-      email: 'julia@email.com',
-      status: 'active',
-      lastVisit: '2025-12-18',
-      totalVisits: 15,
-      whatsapp: '+55 11 96543-2109',
-      birthDate: '1992-03-10',
-      gender: 'Feminino',
-      allergies: 'Alergia a níquel',
-      healthConditions: 'Hipertensão',
-      ingrowingNails: 'não',
-      sensitivity: 'Média',
-      fungus: 'sim',
-    },
-    {
-      id: '4',
-      name: 'Carla Oliveira',
-      phone: '+55 11 95432-1098',
-      email: 'carla@email.com',
-      status: 'active',
-      lastVisit: '2025-12-12',
-      totalVisits: 5,
-      whatsapp: '+55 11 95432-1098',
-      birthDate: '1998-11-30',
-      gender: 'Feminino',
-      allergies: 'Nenhuma',
-      healthConditions: 'Nenhuma',
-      ingrowingNails: 'sim',
-      sensitivity: 'Alta',
-      fungus: 'não',
-    },
-    {
-      id: '5',
-      name: 'Beatriz Lima',
-      phone: '+55 11 94321-0987',
-      email: 'beatriz@email.com',
-      status: 'active',
-      lastVisit: '2025-12-16',
-      totalVisits: 20,
-      whatsapp: '+55 11 94321-0987',
-      birthDate: '1988-07-05',
-      gender: 'Feminino',
-      allergies: 'Alergia a silicone',
-      healthConditions: 'Artrite',
-      ingrowingNails: 'não',
-      sensitivity: 'Baixa',
-      fungus: 'não',
     },
   ];
 
-  const services = [
-    { id: '1', name: 'Manicure Clássica', duration: '45 min', price: 'R$ 60' },
-    { id: '2', name: 'Alongamento em Gel', duration: '90 min', price: 'R$ 120' },
-    { id: '3', name: 'Nail Art Premium', duration: '120 min', price: 'R$ 150' },
-    { id: '4', name: 'Pedicure Completo', duration: '60 min', price: 'R$ 80' },
-    { id: '5', name: 'Esfoliação e Massagem', duration: '50 min', price: 'R$ 90' },
-  ];
+  const formatCurrency = (value) => {
+    const num = Number(value || 0);
+    return `R$ ${num.toFixed(2).replace('.', ',')}`;
+  };
 
-  const availableTimeSlots = [
-    '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00',
-    '16:30', '17:00', '17:30', '18:00'
-  ];
+  const mapServiceFromApi = (service, index) => ({
+    id: String(service.idServico ?? service.id ?? index),
+    name: service.nomeServico ?? service.nome ?? service.titulo ?? 'Serviço',
+    price: formatCurrency(service.precoBase ?? service.preco ?? service.valor ?? service.precoEstimado ?? 0),
+    raw: service,
+  });
+
+  useEffect(() => {
+    let active = true;
+    const fetchServices = async () => {
+      setServicesLoading(true);
+      setServicesError(null);
+      try {
+        const data = await listarServicosAtivos();
+        if (active) {
+          const mapped = (Array.isArray(data) ? data : []).map(mapServiceFromApi);
+          setServices(mapped);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao listar serviços (admin modal):', error);
+        if (active) setServicesError('Erro ao carregar serviços.');
+      } finally {
+        if (active) setServicesLoading(false);
+      }
+    };
+    fetchServices();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const fetchClients = async () => {
+      setClientsLoading(true);
+      setClientsError(null);
+      try {
+        const data = await listarClientes('');
+        if (active) {
+          const mapped = (Array.isArray(data) ? data : []).map((c, idx) => ({
+            id: String(c.idCliente ?? c.id ?? idx),
+            name: c.nome ?? c.nomeCliente ?? 'Cliente',
+            phone: c.whatsapp ?? c.telefone ?? '',
+            email: c.email ?? '',
+            status: 'active',
+            lastVisit: c.ultimaVisita ?? null,
+            totalVisits: c.totalVisitas ?? 0,
+            whatsapp: c.whatsapp ?? c.telefone ?? '',
+            birthDate: c.dataNascimento ?? '',
+            gender: c.genero ?? '',
+            allergies: c.alergias ?? '',
+            healthConditions: c.condicoesSaude ?? '',
+            ingrowingNails: c.possuiUnhasEncravadas ?? '',
+            sensitivity: c.sensibilidade ?? '',
+            fungus: c.possuiMicoseFungos ?? '',
+          }));
+          setClients(mapped);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao listar clientes:', error);
+        if (active) setClientsError('Não foi possível carregar os clientes.');
+      } finally {
+        if (active) setClientsLoading(false);
+      }
+    };
+    fetchClients();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const fetchBusinessHours = async () => {
+      setBusinessHoursLoading(true);
+      try {
+        const data = await listarHorarioComercial();
+        if (active) {
+          setBusinessHours(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao listar horário comercial:', error);
+        setBusinessHours([]);
+      } finally {
+        if (active) setBusinessHoursLoading(false);
+      }
+    };
+    fetchBusinessHours();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Gera slots de 30 em 30 minutos entre hora inicial e final
+  const generateTimeSlots = (startTime, endTime) => {
+    const slots = [];
+    if (!startTime || !endTime) return slots;
+
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    
+    let current = new Date();
+    current.setHours(startHour, startMin, 0);
+    const end = new Date();
+    end.setHours(endHour, endMin, 0);
+
+    while (current < end) {
+      const hour = String(current.getHours()).padStart(2, '0');
+      const min = String(current.getMinutes()).padStart(2, '0');
+      slots.push(`${hour}:${min}`);
+      current.setMinutes(current.getMinutes() + 30);
+    }
+    return slots;
+  };
+
+  // Gera horários disponíveis baseado na data e horário comercial
+  const getAvailableTimeSlots = () => {
+    if (!newAppointment.date || businessHours.length === 0) {
+      return [];
+    }
+
+    // Parse da data: input type="date" pode vir em diferentes formatos
+    // Tenta formato YYYY-MM-DD primeiro (padrão), depois DD/MM/YYYY
+    let selectedDate;
+    if (newAppointment.date.includes('-')) {
+      // Formato: YYYY-MM-DD (padrão do input type="date")
+      selectedDate = new Date(newAppointment.date + 'T00:00:00');
+    } else if (newAppointment.date.includes('/')) {
+      // Formato: DD/MM/YYYY
+      const [day, month, year] = newAppointment.date.split('/');
+      selectedDate = new Date(year, month - 1, day);
+    } else {
+      return [];
+    }
+
+    // Validar se a data é válida
+    if (isNaN(selectedDate.getTime())) {
+      return [];
+    }
+
+    // Corrigir: toLocaleDateString não aceita 'uppercase' como opção
+    // Usar 'long' e depois aplicar toUpperCase()
+    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+    const dayMap = {
+      'SUNDAY': 'SUNDAY',
+      'MONDAY': 'MONDAY',
+      'TUESDAY': 'TUESDAY',
+      'WEDNESDAY': 'WEDNESDAY',
+      'THURSDAY': 'THURSDAY',
+      'FRIDAY': 'FRIDAY',
+      'SATURDAY': 'SATURDAY',
+    };
+    const normalizedDay = dayMap[dayOfWeek] || dayOfWeek;
+
+    const dayHours = businessHours.find((h) => h.diaSemana === normalizedDay);
+
+    if (!dayHours || !dayHours.ativo) {
+      return []; // Dia fechado
+    }
+
+    // Extrair apenas HH:mm
+    const openTime = dayHours.horaAbertura?.substring(0, 5) || '09:00';
+    const closeTime = dayHours.horaFechamento?.substring(0, 5) || '18:00';
+
+    return generateTimeSlots(openTime, closeTime);
+  };
+
+  const availableTimeSlots = getAvailableTimeSlots();
 
   // Horários ocupados (baseado nos agendamentos de hoje)
   const bookedTimeSlots = todayAppointments.map(apt => apt.time);
@@ -204,10 +268,93 @@ export function HomeScreen({
     setIsEditing(false);
   };
 
-  const handleSaveEdit = () => {
-    // Aqui você poderia fazer uma requisição para salvar os dados no backend
-    setSelectedClient(editData);
-    setIsEditing(false);
+  const handleSaveEdit = async () => {
+    // Validar campos obrigatórios
+    if (!editData?.name?.trim()) {
+      alert('Nome é obrigatório');
+      return;
+    }
+
+    if (!editData?.whatsapp?.trim()) {
+      alert('WhatsApp é obrigatório');
+      return;
+    }
+
+    try {
+      let savedClient;
+
+      if (editData.id) {
+        // Atualizar cliente existente
+        const updateDTO = {
+          nome: editData.name,
+          email: editData.email || null,
+          whatsapp: editData.whatsapp,
+          dataNascimento: editData.birthDate || null,
+          genero: editData.gender || null,
+          alergias: editData.allergies || 'Nenhuma',
+          condicoesSaude: editData.healthConditions || 'Nenhuma',
+          possuiUnhasEncravadas: editData.ingrowingNails === 'sim',
+          sensibilidadeExcessiva: editData.sensitivity === 'alta',
+          possuiMicoseFungos: editData.fungus === 'sim',
+          isAtivo: editData.status === 'active',
+        };
+
+        savedClient = await atualizarCliente(Number(editData.id), updateDTO);
+        console.log('✅ Cliente atualizado:', savedClient);
+      } else {
+        // Criar novo cliente
+        const newClientDTO = {
+          nome: editData.name,
+          email: editData.email || null,
+          whatsapp: editData.whatsapp,
+          dataNascimento: editData.birthDate || null,
+          genero: editData.gender || null,
+          alergias: editData.allergies || 'Nenhuma',
+          condicoesSaude: editData.healthConditions || 'Nenhuma',
+          possuiUnhasEncravadas: editData.ingrowingNails === 'sim',
+          sensibilidadeExcessiva: editData.sensitivity === 'alta',
+          possuiMicoseFungos: editData.fungus === 'sim',
+          isAtivo: true,
+        };
+
+        savedClient = await salvarCliente(newClientDTO);
+        console.log('✅ Cliente criado:', savedClient);
+      }
+
+      // Mapear resposta
+      const mappedClient = {
+        id: String(savedClient.idCliente),
+        name: savedClient.nome,
+        phone: savedClient.whatsapp,
+        email: savedClient.email || '',
+        status: savedClient.isAtivo ? 'active' : 'inactive',
+        lastVisit: savedClient.ultimaVisita || null,
+        totalVisits: savedClient.totalVisitas || 0,
+        whatsapp: savedClient.whatsapp,
+        birthDate: savedClient.dataNascimento || '',
+        gender: savedClient.genero || '',
+        allergies: savedClient.alergias || '',
+        healthConditions: savedClient.condicoesSaude || '',
+        ingrowingNails: savedClient.possuiUnhasEncravadas ? 'sim' : 'não',
+        sensitivity: savedClient.sensibilidadeExcessiva ? 'alta' : 'normal',
+        fungus: savedClient.possuiMicoseFungos ? 'sim' : 'não',
+      };
+
+      // Atualizar lista
+      if (editData.id) {
+        setClients((prev) => prev.map((c) => (c.id === editData.id ? mappedClient : c)));
+      } else {
+        setClients((prev) => [mappedClient, ...prev]);
+      }
+
+      setSelectedClient(mappedClient);
+      setIsEditing(false);
+      alert('✅ Cliente salvo com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao salvar cliente:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido';
+      alert('❌ Erro ao salvar cliente:\n' + errorMessage);
+    }
   };
 
   const handleEditChange = (field, value) => {
@@ -466,7 +613,28 @@ export function HomeScreen({
             </div>
           </div>
           <button
-            onClick={() => alert('Adicionar novo cliente')}
+            onClick={() => {
+              const emptyClient = {
+                id: null,
+                name: '',
+                phone: '',
+                email: '',
+                status: 'active',
+                lastVisit: '—',
+                totalVisits: 0,
+                whatsapp: '',
+                birthDate: '',
+                gender: 'Feminino',
+                allergies: '',
+                healthConditions: '',
+                ingrowingNails: 'não',
+                sensitivity: 'Normal',
+                fungus: 'não',
+              };
+              setSelectedClient(emptyClient);
+              setEditData(emptyClient);
+              setIsEditing(true);
+            }}
             className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
           >
             <Plus className="text-white" size={24} />
@@ -475,64 +643,81 @@ export function HomeScreen({
       </div>
 
       {/* Clients List */}
-      <div className="space-y-3 pb-4">
-        {filteredClients.map((client) => (
-          <div
-            key={client.id}
-            onClick={() => openClientDetails(client)}
-            className="bg-white rounded-xl p-4 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <span className="text-primary font-semibold text-lg">
-                    {client.name.charAt(0)}
+      {clientsLoading && (
+        <div className="text-center py-6 text-primary flex items-center justify-center gap-2">
+          <Loader className="animate-spin" size={18} />
+          <span>Carregando clientes...</span>
+        </div>
+      )}
+
+      {clientsError && (
+        <div className="text-center py-6 text-red-600 bg-red-50 rounded-xl border border-red-100">
+          {clientsError}
+        </div>
+      )}
+
+      {!clientsLoading && !clientsError && (
+        <>
+          <div className="space-y-3 pb-4">
+            {filteredClients.map((client) => (
+              <div
+                key={client.id}
+                onClick={() => openClientDetails(client)}
+                className="bg-white rounded-xl p-4 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <span className="text-primary font-semibold text-lg">
+                        {client.name.charAt(0)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-gray-800 font-medium">{client.name}</p>
+                      <p className="text-gray-600 text-sm">{client.phone}</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                    Ativa
                   </span>
                 </div>
-                <div>
-                  <p className="text-gray-800 font-medium">{client.name}</p>
-                  <p className="text-gray-600 text-sm">{client.phone}</p>
+
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium text-primary">{client.totalVisits}</span> visitas
+                    {client.lastVisit && (
+                      <span className="ml-2">• Última: {new Date(client.lastVisit).toLocaleDateString('pt-BR')}</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openClientDetails(client);
+                        setIsEditing(true);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <Edit2 className="text-primary" size={16} />
+                    </button>
+                    <button className="p-2 hover:bg-red-50 rounded-lg transition-colors">
+                      <UserX className="text-red-500" size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                Ativa
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-              <div className="text-sm text-gray-600">
-                <span className="font-medium text-primary">{client.totalVisits}</span> visitas
-                {client.lastVisit && (
-                  <span className="ml-2">• Última: {new Date(client.lastVisit).toLocaleDateString('pt-BR')}</span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openClientDetails(client);
-                    setIsEditing(true);
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <Edit2 className="text-primary" size={16} />
-                </button>
-                <button className="p-2 hover:bg-red-50 rounded-lg transition-colors">
-                  <UserX className="text-red-500" size={16} />
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {filteredClients.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Users className="text-gray-400" size={32} />
-          </div>
-          <p className="text-gray-500">Nenhum cliente encontrado</p>
-        </div>
+          {filteredClients.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Users className="text-gray-400" size={32} />
+              </div>
+              <p className="text-gray-500">Nenhum cliente encontrado</p>
+            </div>
+          )}
+        </>
       )}
     </>
   );
@@ -1038,7 +1223,12 @@ export function HomeScreen({
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Selecione um serviço</option>
-                  {services.map((service) => (
+                  {servicesLoading && <option disabled>Carregando serviços...</option>}
+                  {servicesError && <option disabled>{servicesError}</option>}
+                  {!servicesLoading && !servicesError && services.length === 0 && (
+                    <option disabled>Nenhum serviço disponível</option>
+                  )}
+                  {!servicesLoading && !servicesError && services.map((service) => (
                     <option key={service.id} value={service.id}>
                       {service.name} - {service.price}
                     </option>

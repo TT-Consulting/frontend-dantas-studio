@@ -1,86 +1,123 @@
-import { useState } from 'react';
-import { ArrowLeft, Package, Plus, Edit2, Trash2, AlertTriangle, Check, X, TrendingDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Package, Plus, Edit2, Trash2, AlertTriangle, Check, X, TrendingDown, RefreshCw } from 'lucide-react';
+import {
+  listarEstoque,
+  salvarMaterial,
+  ajustarQuantidade,
+  alternarStatusMaterial,
+} from '../../../api';
 
 export function InventoryManagement({ onBack }) {
-  const [items, setItems] = useState([
-    { id: '1', name: 'Esmalte Vermelho', category: 'Esmaltes', currentQuantity: 3, minQuantity: 5, unit: 'unid' },
-    { id: '2', name: 'Gel UV Transparente', category: 'Géis', currentQuantity: 8, minQuantity: 3, unit: 'unid' },
-    { id: '3', name: 'Lixa 180/240', category: 'Lixas', currentQuantity: 15, minQuantity: 10, unit: 'unid' },
-    { id: '4', name: 'Base Coat', category: 'Bases', currentQuantity: 2, minQuantity: 3, unit: 'unid' },
-    { id: '5', name: 'Top Coat', category: 'Finalizadores', currentQuantity: 4, minQuantity: 3, unit: 'unid' },
-    { id: '6', name: 'Removedor de Gel', category: 'Removedores', currentQuantity: 1, minQuantity: 2, unit: 'litros' },
-    { id: '7', name: 'Algodão', category: 'Materiais', currentQuantity: 50, minQuantity: 20, unit: 'unid' },
-    { id: '8', name: 'Acetona', category: 'Removedores', currentQuantity: 3, minQuantity: 2, unit: 'litros' },
-  ]);
-
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    currentQuantity: 0,
-    minQuantity: 0,
-    unit: 'unid',
+    nomeItem: '',
+    categoria: '',
+    quantidadeAtual: 0,
+    quantidadeMinima: 0,
+    unidadeMedida: 'unid',
   });
 
   const categories = ['Esmaltes', 'Géis', 'Lixas', 'Bases', 'Finalizadores', 'Removedores', 'Materiais', 'Outros'];
   const units = ['unid', 'litros', 'ml', 'gramas', 'kg'];
 
-  const lowStockItems = items.filter(item => item.currentQuantity <= item.minQuantity);
-
-  const handleSave = () => {
-    if (!formData.name || !formData.category) return;
-
-    if (editingItem) {
-      setItems(items.map(item =>
-        item.id === editingItem.id
-          ? { ...item, ...formData }
-          : item
-      ));
-    } else {
-      const newItem = {
-        id: Date.now().toString(),
-        ...formData,
-      };
-      setItems([...items, newItem]);
+  // Carregar dados do banco
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await listarEstoque();
+      console.log('✅ Estoque carregado:', data);
+      setItems(data);
+    } catch (err) {
+      console.error('❌ Erro ao carregar estoque:', err);
+      setError('Falha ao carregar estoque do banco de dados.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setShowAddModal(false);
-    setEditingItem(null);
-    setFormData({ name: '', category: '', currentQuantity: 0, minQuantity: 0, unit: 'unid' });
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const lowStockItems = items.filter((item) => item.quantidadeAtual <= item.quantidadeMinima);
+
+  const handleSave = async () => {
+    if (!formData.nomeItem || !formData.categoria) return;
+
+    try {
+      if (editingItem) {
+        // Atualizar item existente
+        console.log(`🔄 Atualizando material ${editingItem.idMaterial}`);
+        await ajustarQuantidade(editingItem.idMaterial, formData.quantidadeAtual);
+      } else {
+        // Criar novo material
+        console.log('✨ Criando novo material');
+        await salvarMaterial(formData);
+      }
+      await loadData(); // Recarrega a lista
+      setShowAddModal(false);
+      setEditingItem(null);
+      setFormData({
+        nomeItem: '',
+        categoria: '',
+        quantidadeAtual: 0,
+        quantidadeMinima: 0,
+        unidadeMedida: 'unid',
+      });
+    } catch (err) {
+      console.error('❌ Erro ao salvar material:', err);
+      setError('Erro ao salvar material. Tente novamente.');
+    }
   };
 
   const handleEdit = (item) => {
     setEditingItem(item);
     setFormData({
-      name: item.name,
-      category: item.category,
-      currentQuantity: item.currentQuantity,
-      minQuantity: item.minQuantity,
-      unit: item.unit,
+      nomeItem: item.nomeItem,
+      categoria: item.categoria,
+      quantidadeAtual: item.quantidadeAtual,
+      quantidadeMinima: item.quantidadeMinima,
+      unidadeMedida: item.unidadeMedida,
     });
     setShowAddModal(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja remover este item?')) {
-      setItems(items.filter(item => item.id !== id));
+      try {
+        console.log(`❌ Removendo material ${id}`);
+        await alternarStatusMaterial(id, false); // Desativar em vez de deletar
+        await loadData();
+      } catch (err) {
+        console.error('Erro ao remover material:', err);
+        setError('Erro ao remover material.');
+      }
     }
   };
 
-  const updateQuantity = (id, change) => {
-    setItems(items.map(item =>
-      item.id === id
-        ? { ...item, currentQuantity: Math.max(0, item.currentQuantity + change) }
-        : item
-    ));
+  const updateQuantity = async (id, change) => {
+    try {
+      const item = items.find((i) => i.idMaterial === id);
+      const novaQuantidade = Math.max(0, item.quantidadeAtual + change);
+      console.log(`📦 Ajustando quantidade do material ${id} para ${novaQuantidade}`);
+      await ajustarQuantidade(id, novaQuantidade);
+      await loadData();
+    } catch (err) {
+      console.error('Erro ao atualizar quantidade:', err);
+      setError('Erro ao atualizar quantidade.');
+    }
   };
 
   const getStockStatus = (item) => {
-    const percentage = (item.currentQuantity / item.minQuantity) * 100;
-    if (item.currentQuantity === 0) {
+    const percentage = (item.quantidadeAtual / item.quantidadeMinima) * 100;
+    if (item.quantidadeAtual === 0) {
       return { color: 'bg-red-500', label: 'Esgotado', textColor: 'text-red-700' };
-    } else if (item.currentQuantity < item.minQuantity) {
+    } else if (item.quantidadeAtual < item.quantidadeMinima) {
       return { color: 'bg-red-400', label: 'Estoque Baixo', textColor: 'text-red-700' };
     } else if (percentage <= 150) {
       return { color: 'bg-yellow-400', label: 'Atenção', textColor: 'text-yellow-700' };
@@ -93,23 +130,49 @@ export function InventoryManagement({ onBack }) {
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="bg-white px-5 py-4 shadow-sm sticky top-0 z-10">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-primary hover:text-accent transition-colors mb-4"
-        >
-          <ArrowLeft size={20} />
-          <span>Voltar</span>
-        </button>
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-primary hover:text-accent transition-colors"
+          >
+            <ArrowLeft size={20} />
+            <span>Voltar</span>
+          </button>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={16} />
+            Atualizar
+          </button>
+        </div>
         <h2 className="text-primary text-2xl">Estoque e Materiais</h2>
-        <p className="text-gray-600 text-sm mt-1">Controle seus produtos e materiais</p>
+        <p className="text-gray-600 text-sm mt-1">Controle seus produtos e materiais do MariaDB</p>
       </div>
 
+      {/* Error Alert */}
+      {error && (
+        <div className="px-5 pt-6">
+          <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+            <p className="text-red-700 font-medium">❌ {error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="px-5 pt-6">
+          <p className="text-gray-500 text-center">Conectando ao MariaDB...</p>
+        </div>
+      )}
+
       {/* Alert for Low Stock */}
-      {lowStockItems.length > 0 && (
+      {!loading && lowStockItems.length > 0 && (
         <div className="px-5 pt-6">
           <div className="bg-red-50 rounded-xl p-4 border border-red-200">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+              <AlertTriangle className="text-red-600 shrink-0 mt-0.5" size={20} />
               <div>
                 <p className="text-red-700 font-medium mb-1">
                   ⚠️ {lowStockItems.length} {lowStockItems.length === 1 ? 'item com estoque baixo' : 'itens com estoque baixo'}
@@ -123,35 +186,45 @@ export function InventoryManagement({ onBack }) {
         </div>
       )}
 
+      {/* Empty State */}
+      {!loading && items.length === 0 && (
+        <div className="px-5 pt-6">
+          <p className="text-gray-500 text-center">Nenhum material encontrado no estoque.</p>
+        </div>
+      )}
+
       {/* Inventory List */}
       <div className="px-5 py-6 space-y-3">
-        {items
-          .sort((a, b) => {
-            // Sort by low stock first
-            const aLow = a.currentQuantity <= a.minQuantity;
-            const bLow = b.currentQuantity <= b.minQuantity;
-            if (aLow && !bLow) return -1;
-            if (!aLow && bLow) return 1;
-            return 0;
-          })
-          .map((item) => {
-            const status = getStockStatus(item);
-            const stockPercentage = Math.min(100, (item.currentQuantity / (item.minQuantity * 2)) * 100);
+        {!loading &&
+          items
+            .sort((a, b) => {
+              // Sort by low stock first
+              const aLow = a.quantidadeAtual <= a.quantidadeMinima;
+              const bLow = b.quantidadeAtual <= b.quantidadeMinima;
+              if (aLow && !bLow) return -1;
+              if (!aLow && bLow) return 1;
+              return 0;
+            })
+            .map((item) => {
+              const status = getStockStatus(item);
+              const stockPercentage = Math.min(100, (item.quantidadeAtual / (item.quantidadeMinima * 2)) * 100);
 
             return (
-              <div key={item.id} className="bg-white rounded-xl p-5 shadow-md">
+              <div key={item.idMaterial} className="bg-white rounded-xl p-5 shadow-md">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <h3 className="text-gray-800 font-semibold mb-1">{item.name}</h3>
-                    <p className="text-gray-600 text-sm">{item.category}</p>
+                    <h3 className="text-gray-800 font-semibold mb-1">{item.nomeItem}</h3>
+                    <p className="text-gray-600 text-sm">{item.categoria}</p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    item.currentQuantity === 0
-                      ? 'bg-red-100 text-red-700'
-                      : item.currentQuantity <= item.minQuantity
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-green-100 text-green-700'
-                  }`}>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      item.quantidadeAtual === 0
+                        ? 'bg-red-100 text-red-700'
+                        : item.quantidadeAtual <= item.quantidadeMinima
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}
+                  >
                     {status.label}
                   </span>
                 </div>
@@ -160,10 +233,10 @@ export function InventoryManagement({ onBack }) {
                 <div className="mb-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600">
-                      Quantidade: <span className="font-semibold text-gray-800">{item.currentQuantity} {item.unit}</span>
+                      Quantidade: <span className="font-semibold text-gray-800">{item.quantidadeAtual} {item.unidadeMedida}</span>
                     </span>
                     <span className="text-gray-500 text-xs">
-                      Mín: {item.minQuantity} {item.unit}
+                      Mín: {item.quantidadeMinima} {item.unidadeMedida}
                     </span>
                   </div>
                   <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -178,13 +251,13 @@ export function InventoryManagement({ onBack }) {
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                     <button
-                      onClick={() => updateQuantity(item.id, -1)}
+                      onClick={() => updateQuantity(item.idMaterial, -1)}
                       className="w-8 h-8 bg-white rounded hover:bg-gray-50 transition-colors flex items-center justify-center"
                     >
                       <span className="text-gray-600 font-semibold">−</span>
                     </button>
                     <button
-                      onClick={() => updateQuantity(item.id, 1)}
+                      onClick={() => updateQuantity(item.idMaterial, 1)}
                       className="w-8 h-8 bg-white rounded hover:bg-gray-50 transition-colors flex items-center justify-center"
                     >
                       <span className="text-primary font-semibold">+</span>
@@ -197,7 +270,7 @@ export function InventoryManagement({ onBack }) {
                     <Edit2 className="text-primary" size={18} />
                   </button>
                   <button
-                    onClick={() => handleDelete(item.id)}
+                    onClick={() => handleDelete(item.idMaterial)}
                     className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="text-red-500" size={18} />
@@ -212,7 +285,13 @@ export function InventoryManagement({ onBack }) {
       <button
         onClick={() => {
           setEditingItem(null);
-          setFormData({ name: '', category: '', currentQuantity: 0, minQuantity: 0, unit: 'unid' });
+          setFormData({
+            nomeItem: '',
+            categoria: '',
+            quantidadeAtual: 0,
+            quantidadeMinima: 0,
+            unidadeMedida: 'unid',
+          });
           setShowAddModal(true);
         }}
         className="fixed bottom-24 right-5 w-14 h-14 bg-accent text-white rounded-full shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center"
@@ -244,8 +323,8 @@ export function InventoryManagement({ onBack }) {
                 <label className="text-sm text-gray-600 mb-2 block">Nome do Item</label>
                 <input
                   type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={formData.nomeItem}
+                  onChange={(e) => setFormData({ ...formData, nomeItem: e.target.value })}
                   placeholder="Ex: Esmalte Vermelho"
                   className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
@@ -254,8 +333,8 @@ export function InventoryManagement({ onBack }) {
               <div>
                 <label className="text-sm text-gray-600 mb-2 block">Categoria</label>
                 <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  value={formData.categoria}
+                  onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                   className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Selecione...</option>
@@ -270,8 +349,8 @@ export function InventoryManagement({ onBack }) {
                   <label className="text-sm text-gray-600 mb-2 block">Quantidade Atual</label>
                   <input
                     type="number"
-                    value={formData.currentQuantity}
-                    onChange={(e) => setFormData({ ...formData, currentQuantity: Number(e.target.value) })}
+                    value={formData.quantidadeAtual}
+                    onChange={(e) => setFormData({ ...formData, quantidadeAtual: Number(e.target.value) })}
                     min="0"
                     className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                   />
@@ -280,8 +359,8 @@ export function InventoryManagement({ onBack }) {
                   <label className="text-sm text-gray-600 mb-2 block">Quantidade Mínima</label>
                   <input
                     type="number"
-                    value={formData.minQuantity}
-                    onChange={(e) => setFormData({ ...formData, minQuantity: Number(e.target.value) })}
+                    value={formData.quantidadeMinima}
+                    onChange={(e) => setFormData({ ...formData, quantidadeMinima: Number(e.target.value) })}
                     min="0"
                     className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                   />
@@ -291,8 +370,8 @@ export function InventoryManagement({ onBack }) {
               <div>
                 <label className="text-sm text-gray-600 mb-2 block">Unidade</label>
                 <select
-                  value={formData.unit}
-                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  value={formData.unidadeMedida}
+                  onChange={(e) => setFormData({ ...formData, unidadeMedida: e.target.value })}
                   className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {units.map(unit => (
@@ -314,7 +393,7 @@ export function InventoryManagement({ onBack }) {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!formData.name || !formData.category}
+                disabled={!formData.nomeItem || !formData.categoria}
                 className="flex-1 py-3 bg-accent text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Check size={20} />

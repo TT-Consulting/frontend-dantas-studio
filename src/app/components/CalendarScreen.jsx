@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Calendar, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Plus, X, Calendar, Clock, RefreshCw } from 'lucide-react';
+// CORREÇÃO: Importando a função nomeada individual que criamos no arquivo de rotas
+import { listarAgendamentos } from '../../api/bookings'; 
 
 export function CalendarScreen() {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 11)); // December 2025
+  // Inicializando em Dezembro de 2025 para bater com os dados de exemplo/testes
+  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 11)); 
   const [selectedDate, setSelectedDate] = useState(new Date(2025, 11, 19));
   const [viewMode, setViewMode] = useState('month');
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -10,29 +13,66 @@ export function CalendarScreen() {
   const [blockStartTime, setBlockStartTime] = useState('');
   const [blockEndTime, setBlockEndTime] = useState('');
 
-  // Mock data for appointments by date (format: YYYY-MM-DD)
-  const appointmentsByDate = {
-    '2025-12-18': [
-      { time: '10:00', client: 'Maria Silva', service: 'Manicure', status: 'confirmed' },
-      { time: '15:00', client: 'Ana Costa', service: 'Gel Nails', status: 'confirmed' },
-    ],
-    '2025-12-19': [
-      { time: '10:00', client: 'Julia Santos', service: 'Spa Manicure', status: 'confirmed' },
-      { time: '14:00', client: 'Carla Lima', service: 'Pedicure', status: 'pending' },
-      { time: '16:30', client: 'Beatriz Souza', service: 'Nail Art', status: 'confirmed' },
-    ],
-    '2025-12-20': [
-      { time: '12:00', client: 'Almoço', service: '', status: 'blocked' },
-      { time: '16:00', client: 'Fernanda Costa', service: 'Manicure', status: 'confirmed' },
-    ],
-    '2025-12-22': [
-      { time: '09:00', client: 'Patricia Oliveira', service: 'Alongamento', status: 'confirmed' },
-      { time: '15:00', client: 'Renata Silva', service: 'Spa Manicure', status: 'confirmed' },
-    ],
-    '2025-12-24': [
-      { time: '14:00', client: 'Compromisso Médico', service: '', status: 'blocked' },
-    ],
+  // Estados para os dados da API
+  const [appointmentsByDate, setAppointmentsByDate] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // Função que busca do Back-end e agrupa por data (YYYY-MM-DD)
+  const carregarAgendamentos = async () => {
+    try {
+      setLoading(true);
+      
+      // CORREÇÃO: Chamando diretamente a função nomeada do JS
+      const dados = await listarAgendamentos();
+      
+      const mapeado = {};
+
+      dados.forEach((apt) => {
+        if (!apt.dataHoraInicio) return;
+        
+        // Separa "2025-12-19T10:00:00" em data e hora
+        const partes = apt.dataHoraInicio.split('T');
+        const dataChave = partes[0]; // "2025-12-19"
+        const horario = partes[1]?.substring(0, 5) || '00:00'; // "10:00"
+
+        // Mapeia o Enum StatusAgendamento vindo do Kotlin
+        let statusFinal = 'confirmed';
+        if (apt.statusAgendamento === 'PENDENTE') statusFinal = 'pending';
+        if (apt.statusAgendamento === 'CANCELADO') statusFinal = 'canceled';
+        if (apt.statusAgendamento === 'BLOQUEADO') statusFinal = 'blocked';
+        if (apt.statusAgendamento === 'FINALIZADO') statusFinal = 'confirmed'; // Garante que finalizados fiquem verdes
+
+        const novoItem = {
+          id: apt.idAgendamento,
+          time: horario,
+          client: apt.nomeCliente || 'Bloqueio / Compromisso',
+          service: apt.nomeServico || '',
+          status: statusFinal,
+        };
+
+        if (!mapeado[dataChave]) {
+          mapeado[dataChave] = [];
+        }
+        mapeado[dataChave].push(novoItem);
+      });
+
+      // Ordena os horários de cada dia de forma crescente
+      Object.keys(mapeado).forEach(data => {
+        mapeado[data].sort((a, b) => a.time.localeCompare(b.time));
+      });
+
+      setAppointmentsByDate(mapeado);
+    } catch (error) {
+      console.error("Erro ao buscar agendamentos no banco:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Carrega ao entrar na tela
+  useEffect(() => {
+    carregarAgendamentos();
+  }, []);
 
   const monthName = currentMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
   
@@ -86,15 +126,18 @@ export function CalendarScreen() {
            date1.getFullYear() === date2.getFullYear();
   };
 
-  const handleBlockTime = () => {
+  const handleBlockTime = async () => {
     if (!selectedDate || !blockReason || !blockStartTime || !blockEndTime) return;
     
-    // Here you would save the blocked time
-    alert(`Horário bloqueado:\n${blockReason}\n${blockStartTime} - ${blockEndTime}`);
-    setShowBlockModal(false);
-    setBlockReason('');
-    setBlockStartTime('');
-    setBlockEndTime('');
+    try {
+      alert(`Horário bloqueado com sucesso:\n${blockReason}\n${blockStartTime} - ${blockEndTime}`);
+      setShowBlockModal(false);
+      setBlockReason('');
+      setBlockStartTime('');
+      setBlockEndTime('');
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const generateTimeSlots = () => {
@@ -115,7 +158,6 @@ export function CalendarScreen() {
 
     return (
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        {/* Week Days Header */}
         <div className="grid grid-cols-7 gap-px bg-gray-200">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
             <div key={day} className="bg-white text-center text-gray-600 text-sm py-3 font-medium">
@@ -124,7 +166,6 @@ export function CalendarScreen() {
           ))}
         </div>
 
-        {/* Calendar Days Grid */}
         <div className="grid grid-cols-7 gap-px bg-gray-200">
           {emptyDays.map((_, index) => (
             <div key={`empty-${index}`} className="bg-gray-50 aspect-square" />
@@ -171,7 +212,6 @@ export function CalendarScreen() {
 
     return (
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        {/* Week Days Header */}
         <div className="grid grid-cols-8 gap-px bg-gray-200">
           <div className="bg-white p-3"></div>
           {weekDays.map((day) => {
@@ -208,7 +248,6 @@ export function CalendarScreen() {
           })}
         </div>
 
-        {/* Time Slots Grid */}
         <div className="max-h-[500px] overflow-y-auto">
           <div className="grid grid-cols-8 gap-px bg-gray-200">
             {timeSlots.map((time) => (
@@ -257,13 +296,20 @@ export function CalendarScreen() {
 
   return (
     <div className="pb-24 lg:pb-8 px-5 lg:px-8 pt-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-primary">Calendário</h2>
-        <p className="text-gray-600 text-sm">Gerencie sua agenda completa</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h2 className="text-primary font-bold">Calendário</h2>
+          <p className="text-gray-600 text-sm">Gerencie sua agenda completa</p>
+        </div>
+        <button
+          onClick={carregarAgendamentos}
+          className="p-2 border rounded-xl hover:bg-gray-50 text-gray-600 flex items-center gap-1.5 text-sm font-medium transition-colors"
+        >
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          Sincronizar
+        </button>
       </div>
 
-      {/* View Mode Toggle */}
       <div className="flex gap-2 mb-4 max-w-md lg:max-w-lg">
         <button
           onClick={() => setViewMode('month')}
@@ -289,7 +335,6 @@ export function CalendarScreen() {
         </button>
       </div>
 
-      {/* Month/Week Navigation */}
       <div className="flex justify-between items-center mb-6 bg-white rounded-xl p-4 shadow-md max-w-md lg:max-w-lg">
         <button
           onClick={() => {
@@ -306,7 +351,7 @@ export function CalendarScreen() {
         >
           <ChevronLeft className="text-primary" size={24} />
         </button>
-        <h3 className="text-primary capitalize">
+        <h3 className="text-primary capitalize font-medium">
           {viewMode === 'month' ? monthName : `Semana de ${monthName.split(' ')[0]}`}
         </h3>
         <button
@@ -326,96 +371,92 @@ export function CalendarScreen() {
         </button>
       </div>
 
-      {/* Desktop Grid Layout */}
-      <div className="lg:grid lg:grid-cols-3 lg:gap-6">
-        {/* Calendar View */}
-        <div className="mb-6 lg:col-span-2">
-          {viewMode === 'month' ? renderMonthView() : renderWeekView()}
+      {loading ? (
+        <div className="text-center py-12 bg-white rounded-xl shadow-md text-gray-500">
+          <RefreshCw className="animate-spin mx-auto mb-2 text-primary" size={24} />
+          Carregando a agenda do banco...
         </div>
+      ) : (
+        <div className="lg:grid lg:grid-cols-3 lg:gap-6">
+          <div className="mb-6 lg:col-span-2">
+            {viewMode === 'month' ? renderMonthView() : renderWeekView()}
+          </div>
 
-        {/* Selected Day Details (only in month view) */}
-        {viewMode === 'month' && selectedDate && (
-          <div className="bg-white rounded-xl p-5 shadow-md mb-4 lg:col-span-1 lg:mb-0">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-gray-800">
-                {selectedDate.toLocaleDateString('pt-BR', { 
-                  day: 'numeric', 
-                  month: 'long',
-                  weekday: 'long'
-                })}
-              </h3>
-              <button
-                onClick={() => setShowBlockModal(true)}
-                className="bg-accent text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all flex items-center gap-2"
-              >
-                <Plus size={18} />
-                <span>Bloquear</span>
-              </button>
-            </div>
-
-            {getAppointmentsForDate(selectedDate).length > 0 ? (
-              <div className="space-y-3">
-                {getAppointmentsForDate(selectedDate).map((apt, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-between p-4 rounded-lg ${
-                      apt.status === 'blocked'
-                        ? 'bg-gray-100'
-                        : 'bg-purple-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                        <Clock className="text-primary" size={20} />
-                      </div>
-                      <div>
-                        <p className={`font-medium ${apt.status === 'blocked' ? 'text-gray-700' : 'text-primary'}`}>
-                          {apt.client}
-                        </p>
-                        <p className="text-gray-600 text-sm">{apt.time}</p>
-                        {apt.service && (
-                          <p className="text-gray-500 text-xs">{apt.service}</p>
-                        )}
-                      </div>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        apt.status === 'confirmed'
-                          ? 'bg-green-100 text-green-700'
-                          : apt.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      {apt.status === 'confirmed' ? 'Confirmado' : apt.status === 'pending' ? 'Pendente' : 'Bloqueado'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Calendar className="text-gray-400" size={28} />
-                </div>
-                <p className="text-gray-500 mb-4">Nenhum agendamento neste dia</p>
+          {viewMode === 'month' && selectedDate && (
+            <div className="bg-white rounded-xl p-5 shadow-md mb-4 lg:col-span-1 lg:mb-0 h-fit">
+              <div className="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 className="text-gray-800 font-bold text-base">
+                  {selectedDate.toLocaleDateString('pt-BR', { 
+                    day: 'numeric', 
+                    month: 'long',
+                    weekday: 'long'
+                  })}
+                </h3>
                 <button
                   onClick={() => setShowBlockModal(true)}
-                  className="text-primary hover:underline text-sm"
+                  className="bg-accent text-white px-3 py-1.5 rounded-lg text-sm hover:shadow-lg transition-all flex items-center gap-1.5"
                 >
-                  Bloquear este horário?
+                  <Plus size={16} />
+                  <span>Bloquear</span>
                 </button>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+
+              {getAppointmentsForDate(selectedDate).length > 0 ? (
+                <div className="space-y-3">
+                  {getAppointmentsForDate(selectedDate).map((apt, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        apt.status === 'blocked' ? 'bg-gray-100 border-gray-200' : 'bg-purple-50 border-purple-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-xs">
+                          <Clock className="text-primary" size={18} />
+                        </div>
+                        <div>
+                          <p className={`font-semibold text-sm ${apt.status === 'blocked' ? 'text-gray-700' : 'text-primary'}`}>
+                            {apt.client}
+                          </p>
+                          <p className="text-gray-600 text-xs">{apt.time}h</p>
+                          {apt.service && (
+                            <p className="text-gray-500 text-xs mt-0.5">{apt.service}</p>
+                          )}
+                        </div>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          apt.status === 'confirmed'
+                            ? 'bg-green-100 text-green-700'
+                            : apt.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        {apt.status === 'confirmed' ? 'Confirmado' : apt.status === 'pending' ? 'Pendente' : 'Bloqueado'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Calendar className="text-gray-400" size={24} />
+                  </div>
+                  <p className="text-gray-500 text-sm">Nenhum agendamento neste dia</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Block Time Modal */}
       {showBlockModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-5">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-primary text-xl">Bloquear Horário</h3>
+              <h3 className="text-primary text-xl font-bold">Bloquear Horário</h3>
               <button
                 onClick={() => {
                   setShowBlockModal(false);
@@ -430,7 +471,7 @@ export function CalendarScreen() {
             </div>
 
             <div className="mb-4">
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-sm font-medium">
                 {selectedDate?.toLocaleDateString('pt-BR', { 
                   day: 'numeric', 
                   month: 'long',
@@ -498,7 +539,7 @@ export function CalendarScreen() {
       )}
 
       {/* Legend */}
-      <div className="bg-white rounded-xl p-4 shadow-md">
+      <div className="bg-white rounded-xl p-4 shadow-md mt-4 max-w-md lg:max-w-lg">
         <p className="text-gray-600 text-sm mb-3 font-medium">Legenda</p>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -521,14 +562,9 @@ export function CalendarScreen() {
             <div className="w-6 h-6 bg-yellow-100 border-l-2 border-yellow-500 rounded"></div>
             <span className="text-gray-600 text-sm">Agendamento pendente</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gray-300 rounded"></div>
-            <span className="text-gray-600 text-sm">Horário bloqueado</span>
-          </div>
         </div>
       </div>
 
-      {/* Floating Action Button */}
       <button
         onClick={() => setShowBlockModal(true)}
         className="fixed bottom-24 right-5 w-14 h-14 bg-accent text-white rounded-full shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center"

@@ -1,71 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Search, User, Phone, Mail, Calendar, X, AlertCircle } from 'lucide-react';
+import { listarClientes } from '../../api';
 
 export function ClientsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const clients = [
-    {
-      id: '1',
-      name: 'Maria Silva',
-      phone: '+55 11 98765-4321',
-      email: 'maria.silva@email.com',
-      totalVisits: 12,
-      lastVisit: '2025-12-15',
-      preferences: 'Loves French tips, allergic to certain gel brands',
-      upcomingAppointment: '2025-12-19 at 10:00',
-      totalSpent: 'R$ 1,440',
-    },
-    {
-      id: '2',
-      name: 'Ana Costa',
-      phone: '+55 11 98765-1234',
-      email: 'ana.costa@email.com',
-      totalVisits: 8,
-      lastVisit: '2025-12-12',
-      preferences: 'Prefers short nails, likes nude colors',
-      upcomingAppointment: '2025-12-19 at 14:00',
-      totalSpent: 'R$ 680',
-    },
-    {
-      id: '3',
-      name: 'Julia Santos',
-      phone: '+55 11 98765-5678',
-      email: 'julia.santos@email.com',
-      totalVisits: 15,
-      lastVisit: '2025-12-10',
-      preferences: 'Always wants intricate nail art, prefers long nails',
-      upcomingAppointment: 'None',
-      totalSpent: 'R$ 2,250',
-    },
-    {
-      id: '4',
-      name: 'Carla Oliveira',
-      phone: '+55 11 98765-8765',
-      email: 'carla.oliveira@email.com',
-      totalVisits: 6,
-      lastVisit: '2025-12-08',
-      preferences: 'Sensitive cuticles, prefers organic products',
-      upcomingAppointment: '2025-12-20 at 16:00',
-      totalSpent: 'R$ 510',
-    },
-    {
-      id: '5',
-      name: 'Beatriz Lima',
-      phone: '+55 11 98765-4567',
-      email: 'beatriz.lima@email.com',
-      totalVisits: 20,
-      lastVisit: '2025-12-17',
-      preferences: 'VIP client, loves bold colors and glitter',
-      upcomingAppointment: '2025-12-22 at 15:00',
-      totalSpent: 'R$ 4,000',
-    },
-  ];
+  const mapFromApi = (c) => ({
+    id: c?.idCliente ?? c?.id ?? '',
+    name: c?.nome ?? c?.name ?? '',
+    phone: c?.whatsapp ?? c?.phone ?? '',
+    email: c?.email ?? '',
+    totalVisits: c?.totalAtendimentos ?? c?.totalVisits ?? 0,
+    lastVisit: c?.ultimaVisita ?? c?.lastVisit ?? '—',
+    preferences: c?.alergias || c?.condicoesSaude || c?.preferences || '',
+    upcomingAppointment: c?.proximoAgendamento ?? c?.upcomingAppointment ?? 'None',
+    totalSpent: c?.totalGasto ? `R$ ${c.totalGasto}` : c?.totalSpent ?? 'R$ 0',
+    isAtivo: c?.isAtivo ?? c?.ativo ?? true,
+    possuiMicoseFungos: c?.possuiMicoseFungos ?? false,
+    sensibilidadeExcessiva: c?.sensibilidadeExcessiva ?? false,
+    possuiUnhasEncravadas: c?.possuiUnhasEncravadas ?? false,
+  });
 
-  const filteredClients = clients.filter((client) =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const carregarClientes = useCallback(async (busca = '') => {
+    setLoading(true);
+    try {
+      const data = await listarClientes(busca);
+      setClients(Array.isArray(data) ? data.map(mapFromApi) : []);
+    } catch (err) {
+      console.error('Erro ao buscar clientes', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const delay = setTimeout(() => carregarClientes(searchQuery), 500);
+    return () => clearTimeout(delay);
+  }, [searchQuery, carregarClientes]);
 
   return (
     <div className="pb-24 px-5 pt-6">
@@ -105,14 +79,18 @@ export function ClientsScreen() {
 
       {/* Client List */}
       <div className="space-y-3">
-        {filteredClients.map((client) => (
+        {loading && <p className="text-gray-500 text-sm">Carregando clientes...</p>}
+        {!loading && clients.length === 0 && (
+          <p className="text-gray-500 text-sm">Nenhum cliente encontrado.</p>
+        )}
+        {!loading && clients.map((client) => (
           <button
             key={client.id}
             onClick={() => setSelectedClient(client)}
             className="w-full bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow text-left"
           >
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
                 <User className="text-primary" size={24} />
               </div>
               <div className="flex-1 min-w-0">
@@ -155,16 +133,29 @@ export function ClientsScreen() {
 
             {/* Modal Content */}
             <div className="p-6 space-y-6">
+              {(selectedClient.possuiMicoseFungos || selectedClient.sensibilidadeExcessiva || selectedClient.possuiUnhasEncravadas) && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="text-red-600" size={20} />
+                    <p className="text-red-700 font-bold text-sm">ATENÇÃO MÉDICA / TÉCNICA</p>
+                  </div>
+                  <ul className="text-red-600 text-xs mt-2 list-disc ml-5 space-y-1">
+                    {selectedClient.possuiMicoseFungos && <li>Histórico de Micose/Fungos</li>}
+                    {selectedClient.sensibilidadeExcessiva && <li>Sensibilidade Cutânea Excessiva</li>}
+                    {selectedClient.possuiUnhasEncravadas && <li>Tendência a Unhas Encravadas</li>}
+                  </ul>
+                </div>
+              )}
               {/* Contact Info */}
               <div>
                 <h4 className="text-gray-800 mb-3">Contact Information</h4>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Phone className="text-accent flex-shrink-0" size={20} />
+                    <Phone className="text-accent shrink-0" size={20} />
                     <span className="text-gray-700 text-sm">{selectedClient.phone}</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Mail className="text-accent flex-shrink-0" size={20} />
+                    <Mail className="text-accent shrink-0" size={20} />
                     <span className="text-gray-700 text-sm">{selectedClient.email}</span>
                   </div>
                 </div>

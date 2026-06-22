@@ -1,33 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, MapPin, Plus, Edit2, Trash2, Home, Building2, DollarSign, Check, X } from 'lucide-react';
+import { listarLocais, salvarLocal, atualizarLocal, alternarStatusLocal } from '../../../api';
 
 export function LocationsManagement({ onBack }) {
-  const [locations, setLocations] = useState([
-    {
-      id: '1',
-      name: 'Studio Annika - Jardins',
-      address: 'Rua das Flores, 123 - Jardins, São Paulo',
-      type: 'salon',
-      additionalFee: 0,
-      active: true,
-    },
-    {
-      id: '2',
-      name: 'Espaço Beleza - Moema',
-      address: 'Av. Moema, 456 - Moema, São Paulo',
-      type: 'salon',
-      additionalFee: 0,
-      active: true,
-    },
-    {
-      id: '3',
-      name: 'Atendimento a Domicílio',
-      address: 'No conforto da casa da cliente',
-      type: 'home',
-      additionalFee: 30,
-      active: true,
-    },
-  ]);
+  const [locations, setLocations] = useState([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
@@ -38,27 +14,63 @@ export function LocationsManagement({ onBack }) {
     additionalFee: 0,
   });
 
-  const handleSave = () => {
+  // Mapeamento de API ⇄ UI
+  const mapFromApi = (l) => ({
+    id: l?.idLocal ?? l?.id ?? '',
+    name: l?.nomeLocal ?? l?.name ?? '',
+    address: l?.enderecoCompleto ?? l?.address ?? '',
+    type: l?.tipo ?? l?.type ?? 'salon',
+    additionalFee: l?.taxaAdicional ?? l?.additionalFee ?? 0,
+    active: l?.isAtivo ?? l?.ativo ?? true,
+  });
+
+  const fetchLocais = async () => {
+    try {
+      const data = await listarLocais();
+      setLocations(Array.isArray(data) ? data.map(mapFromApi) : []);
+    } catch (err) {
+      console.error('Erro ao carregar locais', err);
+    }
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await listarLocais();
+        setLocations(Array.isArray(data) ? data.map(mapFromApi) : []);
+      } catch (err) {
+        console.error('Erro ao carregar locais', err);
+      }
+    };
+    // Defer to avoid synchronous setState warning
+    setTimeout(load, 0);
+  }, []);
+
+  const handleSave = async () => {
     if (!formData.name || !formData.address) return;
 
-    if (editingLocation) {
-      setLocations(locations.map(loc =>
-        loc.id === editingLocation.id
-          ? { ...loc, ...formData }
-          : loc
-      ));
-    } else {
-      const newLocation = {
-        id: Date.now().toString(),
-        ...formData,
-        active: true,
-      };
-      setLocations([...locations, newLocation]);
-    }
+    const payload = {
+      nomeLocal: formData.name,
+      enderecoCompleto: formData.address,
+      tipo: formData.type,
+      taxaAdicional: formData.additionalFee,
+      isAtivo: true,
+    };
 
-    setShowAddModal(false);
-    setEditingLocation(null);
-    setFormData({ name: '', address: '', type: 'salon', additionalFee: 0 });
+    try {
+      if (editingLocation) {
+        await atualizarLocal(editingLocation.id, payload);
+      } else {
+        await salvarLocal(payload);
+      }
+      setShowAddModal(false);
+      setEditingLocation(null);
+      setFormData({ name: '', address: '', type: 'salon', additionalFee: 0 });
+      await fetchLocais();
+    } catch (err) {
+      alert('Erro ao salvar local no servidor.');
+      console.error(err);
+    }
   };
 
   const handleEdit = (location) => {
@@ -72,16 +84,28 @@ export function LocationsManagement({ onBack }) {
     setShowAddModal(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Tem certeza que deseja remover este local?')) {
-      setLocations(locations.filter(loc => loc.id !== id));
+      try {
+        await alternarStatusLocal(id, false);
+        await fetchLocais();
+      } catch (err) {
+        alert('Erro ao alterar status do local.');
+        console.error(err);
+      }
     }
   };
 
-  const toggleActive = (id) => {
-    setLocations(locations.map(loc =>
-      loc.id === id ? { ...loc, active: !loc.active } : loc
-    ));
+  const toggleActive = async (id) => {
+    const loc = locations.find((l) => l.id === id);
+    const newStatus = !(loc?.active);
+    try {
+      await alternarStatusLocal(id, newStatus);
+      await fetchLocais();
+    } catch (err) {
+      alert('Erro ao alternar status do local.');
+      console.error(err);
+    }
   };
 
   return (
@@ -123,7 +147,7 @@ export function LocationsManagement({ onBack }) {
                     <span>{location.address}</span>
                   </div>
                   {location.additionalFee > 0 && (
-                    <div className="flex items-center gap-2 bg-accent/10 px-3 py-1 rounded-lg inline-flex">
+                    <div className="inline-flex items-center gap-2 bg-accent/10 px-3 py-1 rounded-lg">
                       <DollarSign size={14} className="text-accent" />
                       <span className="text-accent text-sm font-medium">
                         Taxa: R$ {location.additionalFee}
