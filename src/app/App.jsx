@@ -22,6 +22,9 @@ import { InventoryManagement } from './components/settings/InventoryManagement';
 import { InactiveClients } from './components/settings/InactiveClients';
 import { AppSettings } from './components/settings/AppSettings';
 
+// Importando a nova tela de manutenção
+import { MaintenanceScreen } from './components/MaintenanceScreen';
+
 export default function App() {
   const [appMode, setAppMode] = useState('landing');
   const [activeScreen, setActiveScreen] = useState('home');
@@ -171,7 +174,7 @@ export default function App() {
     }
   };
 
-  // Landing Page - Public Entry Point
+  // 1. Landing Page - Public Entry Point
   if (appMode === 'landing') {
     return (
       <div className="min-h-screen bg-background">
@@ -184,42 +187,22 @@ export default function App() {
     );
   }
 
-  // Client Portal - Client Area
+  // 2. INTERCEPTADO PARA PRODUÇÃO: Portal do Cliente em Manutenção
   if (appMode === 'client-portal') {
-    return (
-      <div className="min-h-screen bg-background max-w-md mx-auto">
-        <ClientPortal onBack={handleBackToLanding} />
-      </div>
-    );
+    return <MaintenanceScreen onBack={handleBackToLanding} />;
   }
 
-  // Booking Flow - Client Journey
+  // 3. INTERCEPTADO PARA PRODUÇÃO: Fluxo de Agendamento em Manutenção
   if (appMode === 'booking') {
-    return (
-      <div className="min-h-screen bg-background max-w-md mx-auto relative">
-        <BookingScreen onBack={handleBackToLanding} />
-      </div>
-    );
+    return <MaintenanceScreen onBack={handleBackToLanding} />;
   }
 
-  // Admin Login
+  // 4. INTERCEPTADO PARA PRODUÇÃO: Login do Administrador em Manutenção
   if (appMode === 'admin-login') {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="px-5 py-4">
-          <button
-            onClick={handleBackToLanding}
-            className="text-primary hover:text-accent transition-colors text-sm"
-          >
-            ← Back to Studio Annika
-          </button>
-        </div>
-        <LoginScreen onLogin={handleLogin} />
-      </div>
-    );
+    return <MaintenanceScreen onBack={handleBackToLanding} />;
   }
 
-  // Admin Dashboard - Annika's Management System
+  // Admin Dashboard - Sistema de Gestão Interno (Protegido)
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
