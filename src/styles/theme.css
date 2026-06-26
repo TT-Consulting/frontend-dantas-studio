@@ -4,47 +4,61 @@
   --font-size: 16px;
   --font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   
-  /* Paleta Dark Moderna & Elegante (Como padrão) */
+  /* Paleta Light Moderna & Elegante (Como padrão) */
+  --background: #fff8dc;           /* Branco suave */
+  --foreground: #111827;           /* Texto escuro para leitura confortável */
+  --card: #FFFFFF;                 /* Cards brancos */
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
+  
+  /* Cores de Identidade Elevadas */
+  --primary: #7C3AED;              /* Roxo moderno */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F3F4F6;            /* Elementos neutros secundários */
+  --secondary-foreground: #4B5563;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+  
+  /* Destaque Máximo para Conversão/Unhas */
+  --accent: #EC4899;               /* Pink vibrante */
+  --accent-foreground: #FFFFFF;
+  
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E7EB; /* Bordas sutis em telas claras */
+  --input: transparent;
+  --input-background: #F9FAFB;
+  --switch-background: #D1D5DB;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #7C3AED;
+  
+  --radius: 0.75rem;
+}
+
+/* Dark mode for Landing Page */
+.dark {
   --background: #0D0C10;           /* Grafite ultra profundo */
   --foreground: #F3F4F6;           /* Branco suave para leitura confortável */
   --card: #16151A;                 /* Cards levemente mais claros que o fundo */
   --card-foreground: #F3F4F6;
   --popover: #16151A;
   --popover-foreground: #F3F4F6;
-  
-  /* Cores de Identidade Elevadas */
-  --primary: #A855F7;              /* Roxo Neon moderno (mais visível no escuro) */
+  --primary: #A855F7;              /* Roxo Neon moderno */
   --primary-foreground: #FFFFFF;
   --secondary: #1F1E24;            /* Elementos neutros secundários */
   --secondary-foreground: #E5E7EB;
   --muted: #1F1E24;
   --muted-foreground: #9CA3AF;
-  
-  /* Destaque Máximo para Conversão/Unhas */
-  --accent: #FF4081;               /* Pink vibrante com alto contraste no dark */
+  --accent: #FF4081;               /* Pink vibrante */
   --accent-foreground: #FFFFFF;
-  
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --border: rgba(255, 255, 255, 0.08); /* Bordas sutis em telas escuras */
-  --input: transparent;
   --input-background: #1F1E24;
   --switch-background: #374151;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
   --ring: #A855F7;
-  
-  --radius: 0.75rem;
-}
-
-/* Mantido o fallback caso use a classe separada */
-.dark {
-  --background: #0D0C10;
-  --foreground: #F3F4F6;
-  --card: #16151A;
-  --primary: #A855F7;
-  --accent: #FF4081;
-  --border: rgba(255, 255, 255, 0.08);
 }
 
 @theme inline {

@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Calendar, Clock, RefreshCw } from 'lucide-react';
-// CORREÇÃO: Importando a função nomeada individual que criamos no arquivo de rotas
-import { listarAgendamentos } from '../../api/bookings'; 
+import { ChevronLeft, ChevronRight, Plus, X, Calendar, Clock, RefreshCw, Check, XCircle } from 'lucide-react';
+import { buscarAgendamentosPorPeriodo, finalizarAtendimento, cancelarAgendamento } from '../../api/bookings'; 
 
 export function CalendarScreen() {
-  // Inicializando em Dezembro de 2025 para bater com os dados de exemplo/testes
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 11)); 
-  const [selectedDate, setSelectedDate] = useState(new Date(2025, 11, 19));
+  // Inicializando com data atual
+  const [currentMonth, setCurrentMonth] = useState(new Date()); 
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month');
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockReason, setBlockReason] = useState('');
@@ -17,44 +16,47 @@ export function CalendarScreen() {
   const [appointmentsByDate, setAppointmentsByDate] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Função que busca do Back-end e agrupa por data (YYYY-MM-DD)
+  // Função que busca do Back-end usando buscarAgendamentosPorPeriodo
   const carregarAgendamentos = async () => {
     try {
       setLoading(true);
       
-      // CORREÇÃO: Chamando diretamente a função nomeada do JS
-      const dados = await listarAgendamentos();
+      // Por padrão, traz os próximos 7 dias
+      const dados = await buscarAgendamentosPorPeriodo();
       
       const mapeado = {};
 
       dados.forEach((apt) => {
-        if (!apt.dataHoraInicio) return;
-        
-        // Separa "2025-12-19T10:00:00" em data e hora
-        const partes = apt.dataHoraInicio.split('T');
-        const dataChave = partes[0]; // "2025-12-19"
-        const horario = partes[1]?.substring(0, 5) || '00:00'; // "10:00"
+      if (!apt.dataHoraInicio) return;
+      
+      const partes = apt.dataHoraInicio.split('T');
+      const dataChave = partes[0]; 
+      const horario = partes[1]?.substring(0, 5) || '00:00'; 
 
-        // Mapeia o Enum StatusAgendamento vindo do Kotlin
-        let statusFinal = 'confirmed';
-        if (apt.statusAgendamento === 'PENDENTE') statusFinal = 'pending';
-        if (apt.statusAgendamento === 'CANCELADO') statusFinal = 'canceled';
-        if (apt.statusAgendamento === 'BLOQUEADO') statusFinal = 'blocked';
-        if (apt.statusAgendamento === 'FINALIZADO') statusFinal = 'confirmed'; // Garante que finalizados fiquem verdes
+      // Ajuste de mapeamento: O Kotlin costuma expor propriedades diretas ou objetos aninhados no DTO
+      const statusVindoDoBack = apt.status || apt.statusAgendamento || 'PENDENTE';
+      
+      let statusFinal = 'confirmed';
+      if (statusVindoDoBack === 'PENDENTE') statusFinal = 'pending';
+      if (statusVindoDoBack === 'CANCELADO') statusFinal = 'canceled';
+      if (statusVindoDoBack === 'BLOQUEADO') statusFinal = 'blocked';
+      if (statusVindoDoBack === 'FINALIZADO') statusFinal = 'confirmed'; 
 
-        const novoItem = {
-          id: apt.idAgendamento,
-          time: horario,
-          client: apt.nomeCliente || 'Bloqueio / Compromisso',
-          service: apt.nomeServico || '',
-          status: statusFinal,
-        };
+      const novoItem = {
+        id: apt.id || apt.idAgendamento,
+        time: horario,
+        // Garante a leitura dinâmica se vier objeto Cliente ou String direta
+        client: apt.cliente?.nome || apt.nomeCliente || 'Cliente',
+        service: apt.servico?.nome || apt.nomeServico || '',
+        status: statusFinal,
+        statusAgendamento: statusVindoDoBack,
+      };
 
-        if (!mapeado[dataChave]) {
-          mapeado[dataChave] = [];
-        }
-        mapeado[dataChave].push(novoItem);
-      });
+      if (!mapeado[dataChave]) {
+        mapeado[dataChave] = [];
+      }
+      mapeado[dataChave].push(novoItem);
+    });
 
       // Ordena os horários de cada dia de forma crescente
       Object.keys(mapeado).forEach(data => {
@@ -73,6 +75,30 @@ export function CalendarScreen() {
   useEffect(() => {
     carregarAgendamentos();
   }, []);
+
+  // Função para finalizar atendimento
+  const handleFinalizarAtendimento = async (id) => {
+    try {
+      await finalizarAtendimento(id);
+      alert('Atendimento finalizado com sucesso!');
+      carregarAgendamentos(); // Recarregar a lista
+    } catch (error) {
+      console.error('Erro ao finalizar atendimento:', error);
+      alert('Erro ao finalizar atendimento. Tente novamente.');
+    }
+  };
+
+  // Função para cancelar agendamento
+  const handleCancelarAgendamento = async (id) => {
+    try {
+      await cancelarAgendamento(id);
+      alert('Agendamento cancelado com sucesso!');
+      carregarAgendamentos(); // Recarregar a lista
+    } catch (error) {
+      console.error('Erro ao cancelar agendamento:', error);
+      alert('Erro ao cancelar agendamento. Tente novamente.');
+    }
+  };
 
   const monthName = currentMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
   
@@ -406,35 +432,57 @@ export function CalendarScreen() {
                   {getAppointmentsForDate(selectedDate).map((apt, index) => (
                     <div
                       key={index}
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                      className={`p-3 rounded-lg border ${
                         apt.status === 'blocked' ? 'bg-gray-100 border-gray-200' : 'bg-purple-50 border-purple-100'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-xs">
-                          <Clock className="text-primary" size={18} />
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-xs">
+                            <Clock className="text-primary" size={18} />
+                          </div>
+                          <div>
+                            <p className={`font-semibold text-sm ${apt.status === 'blocked' ? 'text-gray-700' : 'text-primary'}`}>
+                              {apt.client}
+                            </p>
+                            <p className="text-gray-600 text-xs">{apt.time}h</p>
+                            {apt.service && (
+                              <p className="text-gray-500 text-xs mt-0.5">{apt.service}</p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className={`font-semibold text-sm ${apt.status === 'blocked' ? 'text-gray-700' : 'text-primary'}`}>
-                            {apt.client}
-                          </p>
-                          <p className="text-gray-600 text-xs">{apt.time}h</p>
-                          {apt.service && (
-                            <p className="text-gray-500 text-xs mt-0.5">{apt.service}</p>
-                          )}
-                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            apt.status === 'confirmed'
+                              ? 'bg-green-100 text-green-700'
+                              : apt.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          {apt.statusAgendamento === 'FINALIZADO' ? 'Finalizado' : 
+                           apt.status === 'confirmed' ? 'Confirmado' : 
+                           apt.status === 'pending' ? 'Pendente' : 'Bloqueado'}
+                        </span>
                       </div>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          apt.status === 'confirmed'
-                            ? 'bg-green-100 text-green-700'
-                            : apt.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-200 text-gray-700'
-                        }`}
-                      >
-                        {apt.status === 'confirmed' ? 'Confirmado' : apt.status === 'pending' ? 'Pendente' : 'Bloqueado'}
-                      </span>
+                      {apt.status !== 'blocked' && apt.statusAgendamento !== 'FINALIZADO' && apt.statusAgendamento !== 'CANCELADO' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleFinalizarAtendimento(apt.id)}
+                            className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm hover:bg-green-700 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <Check size={14} />
+                            Finalizar
+                          </button>
+                          <button
+                            onClick={() => handleCancelarAgendamento(apt.id)}
+                            className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <XCircle size={14} />
+                            Cancelar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

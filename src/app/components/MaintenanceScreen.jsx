@@ -3,7 +3,7 @@ import { logo } from "../../constants/images";
 
 export function MaintenanceScreen({ onBack }) {
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-between p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col justify-between p-6 relative overflow-hidden dark">
       {/* Background decorativo sutil */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
 

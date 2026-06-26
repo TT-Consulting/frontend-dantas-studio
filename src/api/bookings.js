@@ -24,10 +24,14 @@ export const listarAgendamentos = () =>
 export const buscarAgendamentosPorPeriodo = (inicio, fim) =>
   apiClient
     .get('/agendamentos/agenda', { params: { inicio, fim } })
-    .then((res) => res.data)
+    .then((res) => {
+      // Se o status for 204 (No Content), retorna um array vazio para não quebrar o .forEach()
+      if (res.status === 204 || !res.data) return [];
+      return res.data;
+    })
     .catch((err) => {
       console.error(`❌ Erro ao buscar período de agendamentos (${inicio} a ${fim}):`, err);
-      throw err;
+      return [];
     });
 
 /**

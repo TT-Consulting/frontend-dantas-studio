@@ -1,13 +1,16 @@
 import { Calendar, MapPin, Star, Clock, Instagram, Phone, Mail, Menu, User, LogIn, X, ChevronLeft, ChevronRight, Home, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-// Importando as imagens e incluindo o logo conforme apontado na image_53c399.png
-import { CAROUSEL_IMAGES, GALLERY_IMAGES, SERVICE_IMAGES, logo } from '../../constants/images';
+// Importando as imagens, incluindo o logo e a foto de perfil da Annika
+import { CAROUSEL_IMAGES, GALLERY_IMAGES, SERVICE_IMAGES, logo, annikaPerfil } from '../../constants/images';
 
 export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentLocationSlide, setCurrentLocationSlide] = useState(0);
+
+  // Estados para gerenciar a abertura das telas (Modais) do Footer
+  const [activeModal, setActiveModal] = useState(null); // 'quem-somos', 'faq', 'privacidade' ou null
 
   // Hook para alterar dinamicamente o ícone da guia do browser (Favicon)
   useEffect(() => {
@@ -22,7 +25,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
     }
   }, []);
 
-  // Velocidade reduzida: alterado de 4000ms para 6000ms (6 segundos) para maior destaque das imagens
+  // Alteração automática dos slides a cada 6 segundos
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev === CAROUSEL_IMAGES.length - 1 ? 0 : prev + 1));
@@ -38,15 +41,15 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
     setCurrentSlide((prev) => (prev === 0 ? CAROUSEL_IMAGES.length - 1 : prev - 1));
   };
 
-  // Mensagem do WhatsApp pré-definida e profissional
+  // Mensagens do WhatsApp personalizadas
   const whatsappNumber = "5511945893227";
-  const whatsappMessage = encodeURIComponent("Olá, Annika! Gostaria de consultar os horários disponíveis e saber mais sobre seus atendimentos.");
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Olá, Annika! Gostaria de consultar os horários disponíveis e saber mais sobre seus atendimentos.")}`;
+  const whatsappDevolucaoUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Olá! Gostaria de tirar uma dúvida sobre políticas de devolução e estorno de agendamentos.")}`;
 
   const services = [
     { id: '1', name: 'Manicure', description: 'Cuidado clássico para as unhas com esmaltação', price: 'R$ 50', duration: '45 min', image: SERVICE_IMAGES.manicure },
     { id: '2', name: 'Pedicure', description: 'Tratamento relaxante para os pés', price: 'R$ 60', duration: '60 min', image: SERVICE_IMAGES.pedicure },
-    { id: '3', name: 'Unhas de Gel', description: 'Manicure em gel de longa durabilidade', price: 'R$ 120', duration: '90 min', image: SERVICE_IMAGES.gel },
+    { id: '3', name: 'Unhas de Gel', description: 'Unhas em gel de longa durabilidade', price: 'R$ 120', duration: '90 min', image: SERVICE_IMAGES.gel },
     { id: '4', name: 'Nail Art Design', description: 'Desenhos artísticos e personalizados', price: 'R$ 150', duration: '120 min', image: SERVICE_IMAGES.art },
     { id: '5', name: 'Unhas de Acrílico', description: 'Alongamento profissional', price: 'R$ 180', duration: '120 min', image: SERVICE_IMAGES.acrylic },
   ];
@@ -123,7 +126,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                   <div className="w-10 h-10 bg-primary/15 rounded-full flex items-center justify-center"><LogIn size={20} /></div>
                   <div className="text-left flex-1">
                     <p className="font-medium">Área da Profissional</p>
-                    <p className="text-xs text-primary/70">Acesso administrativo</p>
+                    <p className="text-xs text-primary/70">Acesso administrative</p>
                   </div>
                 </button>
               </div>
@@ -152,7 +155,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
 
       {/* Hero Section */}
       <section className="relative pt-20">
-        <div className="relative h-[450px] w-full overflow-hidden shadow-inner">
+        <div className="relative h-[380px] md:h-[600px] lg:h-[750px] w-full overflow-hidden shadow-inner bg-black">
           {CAROUSEL_IMAGES.map((imgUrl, index) => (
             <div
               key={index}
@@ -163,13 +166,12 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
               <img
                 src={imgUrl}
                 alt={`Trabalho Studio Annika ${index + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-center"
               />
             </div>
           ))}
 
-          {/* Filtro escuro diminuído (de bg-black/40 para bg-black/15) para destacar as imagens */}
-          <div className="absolute inset-0 bg-black/15 z-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-black/10 z-20 pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-20 pointer-events-none" />
 
           <button
@@ -217,11 +219,10 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
           <p className="text-muted-foreground text-sm">Tratamentos premium para o cuidado das suas unhas</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
           {services.map((service) => (
             <div
               key={service.id}
-              /* Adicionado efeito hover/active com aumento suave (scale) e sombra elegante */
               className="bg-background rounded-xl p-5 shadow-sm border border-border hover:border-primary/30 transition-all duration-300 flex gap-4 items-start group hover:scale-[1.03] active:scale-[1.01] hover:shadow-md cursor-pointer"
             >
               <div className="w-16 h-16 bg-card rounded-lg overflow-hidden flex-shrink-0 border border-border">
@@ -311,22 +312,22 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
         </div>
       </section>
 
-      {/* Location Section - Implementado Carrossel de Cards */}
+      {/* Location Section */}
       <section className="px-5 py-16" id="location">
         <div className="text-center mb-10">
           <h3 className="text-primary text-2xl mb-2 font-medium">Como Atendemos</h3>
           <p className="text-muted-foreground text-sm">Escolha a melhor opção para você</p>
         </div>
 
-        <div className="max-w-md mx-auto relative group/nav">
+        <div className="max-w-md md:max-w-4xl mx-auto relative group/nav">
           <div className="overflow-hidden relative rounded-xl">
             <div 
-              className="flex transition-transform duration-500 ease-in-out"
+              className="flex md:grid md:grid-cols-2 gap-5 transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${currentLocationSlide * 100}%)` }}
             >
               {/* CARD 1: Atendimento Presencial */}
-              <div className="w-full flex-shrink-0 p-1">
-                <div className="bg-card rounded-xl p-6 shadow-md border border-border min-h-[360px] flex flex-col justify-between">
+              <div className="w-full flex-shrink-0 md:flex-shrink md:w-auto p-1">
+                <div className="bg-card rounded-xl p-6 shadow-md border border-border min-h-[360px] flex flex-col justify-between h-full">
                   <div>
                     <div className="flex items-center gap-2 mb-4 text-primary font-medium tracking-wide uppercase text-xs">
                       <MapPin size={16} className="text-accent" />
@@ -362,8 +363,8 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
               </div>
 
               {/* CARD 2: Atendimento a Domicílio */}
-              <div className="w-full flex-shrink-0 p-1">
-                <div className="bg-card rounded-xl p-6 shadow-md border border-border min-h-[360px] flex flex-col justify-between">
+              <div className="w-full flex-shrink-0 md:flex-shrink md:w-auto p-1">
+                <div className="bg-card rounded-xl p-6 shadow-md border border-border min-h-[360px] flex flex-col justify-between h-full">
                   <div>
                     <div className="flex items-center gap-2 mb-4 text-primary font-medium tracking-wide uppercase text-xs">
                       <Home size={16} className="text-accent" />
@@ -400,29 +401,25 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
             </div>
           </div>
 
-          {/* Setas de navegação do carrossel */}
           <button 
             onClick={() => setCurrentLocationSlide(0)}
-            className={`absolute left-[-15px] top-1/2 -translate-y-1/2 p-1.5 rounded-full border border-border bg-background shadow-md transition-all z-10 ${currentLocationSlide === 0 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
+            className={`absolute left-[-15px] top-1/2 -translate-y-1/2 p-1.5 rounded-full border border-border bg-background shadow-md transition-all z-10 md:hidden ${currentLocationSlide === 0 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
           >
             <ChevronLeft size={18} />
           </button>
           <button 
             onClick={() => setCurrentLocationSlide(1)}
-            className={`absolute right-[-15px] top-1/2 -translate-y-1/2 p-1.5 rounded-full border border-border bg-background shadow-md transition-all z-10 ${currentLocationSlide === 1 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
+            className={`absolute right-[-15px] top-1/2 -translate-y-1/2 p-1.5 rounded-full border border-border bg-background shadow-md transition-all z-10 md:hidden ${currentLocationSlide === 1 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
           >
             <ChevronRight size={18} />
           </button>
 
-          {/* Indicadores de bolinha */}
-          <div className="flex justify-center gap-1.5 mt-4">
+          <div className="flex justify-center gap-1.5 mt-4 md:hidden">
             <button onClick={() => setCurrentLocationSlide(0)} className={`w-2 h-2 rounded-full transition-all ${currentLocationSlide === 0 ? 'bg-accent w-4' : 'bg-border'}`} />
             <button onClick={() => setCurrentLocationSlide(1)} className={`w-2 h-2 rounded-full transition-all ${currentLocationSlide === 1 ? 'bg-accent w-4' : 'bg-border'}`} />
           </div>
         </div>
       </section>
-
-      
 
       {/* CTA Section */}
       <section className="px-5 py-16 bg-gradient-to-b from-card to-background text-center border-t border-border">
@@ -438,23 +435,99 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
         </button>
       </section>
 
-      {/* Footer */}
-      <footer className="px-5 py-12 bg-card border-t border-border">
-        <div className="max-w-md mx-auto">
-          <div className="flex justify-center gap-6 mb-6">
-            <a href="https://www.instagram.com/by.annikadantas" target="_blank" rel="noreferrer" className="w-10 h-10 bg-background border border-border rounded-full flex items-center justify-center text-muted-foreground hover:text-accent transition-colors"><Instagram size={18} /></a>
-            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="w-10 h-10 bg-background border border-border rounded-full flex items-center justify-center text-muted-foreground hover:text-accent transition-colors"><Phone size={18} /></a>
+      {/* Footer Estilo Corporativo Baseado na imagem image_ac233a.png */}
+      <footer className="bg-card border-t border-border pt-16 pb-24 md:pb-16 px-6 sm:px-12">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
+          
+          {/* Coluna 1: Logo e Descrição */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="Logo" className="h-12 w-auto object-contain" />
+              <span className="text-primary font-medium tracking-wide text-lg">Studio Annika</span>
+            </div>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
+              Soluções completas e personalizadas em Nail Design, combinando sofisticação, saúde e durabilidade para suas unhas.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <a href="https://www.instagram.com/by.annikadantas" target="_blank" rel="noreferrer" className="w-9 h-9 bg-background border border-border rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-white transition-colors"><Instagram size={18} /></a>
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" className="w-9 h-9 bg-background border border-border rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-white transition-colors"><Phone size={18} /></a>
+            </div>
           </div>
 
-          <div className="text-center pt-4 border-t border-border">
-            <button onClick={onAdminLogin} className="text-muted-foreground text-xs hover:text-primary transition-colors">
-              Área da Profissional
-            </button>
+          {/* Coluna 2: Institucional */}
+          <div>
+            <h4 className="text-primary font-semibold text-xs tracking-wider uppercase mb-4">Institucional</h4>
+            <ul className="space-y-2.5 text-sm">
+              <li>
+                <button onClick={() => setActiveModal('quem-somos')} className="text-muted-foreground hover:text-accent transition-colors text-left">
+                  Quem somos
+                </button>
+              </li>
+              <li>
+                <a href="#services" className="text-muted-foreground hover:text-accent transition-colors">
+                  Nossos Serviços
+                </a>
+              </li>
+              <li>
+                <a href="#location" className="text-muted-foreground hover:text-accent transition-colors">
+                  Unidade & Atendimento
+                </a>
+              </li>
+            </ul>
           </div>
 
-          <div className="text-center mt-4">
-            <p className="text-muted-foreground/50 text-xs">© 2026 Studio Annika. Todos os direitos reservados.</p>
+          {/* Coluna 3: Ajuda */}
+          <div>
+            <h4 className="text-primary font-semibold text-xs tracking-wider uppercase mb-4">Ajuda</h4>
+            <ul className="space-y-2.5 text-sm">
+              <li>
+                <button onClick={() => setActiveModal('faq')} className="text-muted-foreground hover:text-accent transition-colors text-left">
+                  Dúvidas frequentes
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setActiveModal('privacidade')} className="text-muted-foreground hover:text-accent transition-colors text-left">
+                  Políticas de privacidade
+                </button>
+              </li>
+              <li>
+                <a href={whatsappDevolucaoUrl} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-accent transition-colors flex items-center gap-1">
+                  Devolução e estorno
+                </a>
+              </li>
+            </ul>
           </div>
+
+          {/* Coluna 4: Fale Conosco */}
+          <div>
+            <h4 className="text-primary font-semibold text-xs tracking-wider uppercase mb-4">Fale Conosco</h4>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-center gap-2 text-muted-foreground">
+                <Phone size={16} className="text-accent flex-shrink-0" />
+                <a href={whatsappUrl} target="_blank" rel="noreferrer" className="hover:text-accent transition-colors">
+                  (11) 94589-3227
+                </a>
+              </li>
+              <li className="flex items-center gap-2 text-muted-foreground">
+                <Mail size={16} className="text-accent flex-shrink-0" />
+                <a href="mailto:annika@dantasstudio.com" className="hover:text-accent transition-colors break-all">
+                  annika@dantasstudio.com
+                </a>
+              </li>
+              <li className="pt-2 border-t border-border/60">
+                <button onClick={onAdminLogin} className="text-muted-foreground/60 text-xs hover:text-primary transition-colors">
+                  Painel de Controle Profissional
+                </button>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* Linha de Copyright de Fundo */}
+        <div className="max-w-6xl mx-auto mt-12 pt-6 border-t border-border/40 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-muted-foreground/50">
+          <p>© 2026 Studio Annika. Todos os direitos reservados.</p>
+          <p>Desenvolvido com excelência.</p>
         </div>
       </footer>
 
@@ -468,6 +541,150 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
           <span className="text-sm font-medium tracking-wider">AGENDAR AGORA</span>
         </button>
       </div>
+
+      {/* Modais das Janelas de Informação do Footer */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop Escuro */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setActiveModal(null)}></div>
+          
+          {/* Conteúdo do Modal */}
+          <div className="bg-card w-full max-w-lg rounded-2xl border border-border shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Cabeçalho do Modal */}
+            <div className="p-5 border-b border-border flex justify-between items-center bg-background">
+              <h3 className="text-primary font-medium text-lg">
+                {activeModal === 'quem-somos' && 'Quem Somos'}
+                {activeModal === 'faq' && 'Dúvidas Frequentes (FAQ)'}
+                {activeModal === 'privacidade' && 'Políticas de Privacidade'}
+              </h3>
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="p-1.5 hover:bg-white/5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Corpo com Scroll */}
+            <div className="p-6 overflow-y-auto space-y-4 text-sm text-muted-foreground leading-relaxed">
+              
+              {/* Conteúdo: QUEM SOMOS (Atualizado com as informações da Annika) */}
+              {activeModal === 'quem-somos' && (
+                <div className="flex flex-col items-center text-center space-y-4">
+                  {/* Foto Circular da Annika */}
+                  <div className="w-36 h-36 relative flex-shrink-0 mb-2">
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-sm transform scale-105"></div>
+                    <img 
+                      src={annikaPerfil} 
+                      alt="Annika Dantas" 
+                      className="w-full h-full object-cover rounded-full border-4 border-primary/30 shadow-md relative z-10"
+                    />
+                  </div>
+
+                  {/* Pequeno Resumo */}
+                  <div className="space-y-2">
+                    <h4 className="text-foreground font-semibold text-base">Annika Dantas</h4>
+                    <p className="text-xs text-accent font-medium uppercase tracking-wider">19 anos • São Paulo - SP</p>
+                    <p className="text-left pt-2">
+                      Moradora de São Paulo, <strong>Annika Dantas</strong> transformou sua paixão precoce pela estética e cuidados em um propósito real de elevar a autoestima de suas clientes. Aos 19 anos, alia juventude, criatividade e precisão técnica para liderar o <strong>Studio Dantas</strong>, um ambiente focado no atendimento exclusivo e personalizado.
+                    </p>
+                  </div>
+
+                  {/* Lugares onde trabalhou & Trajetória */}
+                  <div className="w-full text-left pt-2 space-y-1">
+                    <h5 className="text-foreground font-medium border-b border-border/60 pb-1 text-xs uppercase tracking-wide text-primary">Trajetória Profissional</h5>
+                    <p className="pt-1">
+                      Construiu sua experiência prática atuando em renomados salões de beleza e estúdios de estética locais na capital paulista, onde refinou sua técnica de atendimento premium e consolidou os pilares de biossegurança necessários para gerenciar seu próprio negócio.
+                    </p>
+                  </div>
+
+                  {/* Suas Especialidades */}
+                  <div className="w-full text-left pt-2 space-y-2">
+                    <h5 className="text-foreground font-medium border-b border-border/60 pb-1 text-xs uppercase tracking-wide text-primary">Especialidades Técnicas</h5>
+                    <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                      <li className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                        Alongamento em Gel
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                        Esmaltação em Gel
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                        Nail Art Personalizada
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                        Saúde e Blindagem Ungueal
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Um pouco sobre o Studio Dantas */}
+                  <div className="w-full text-left pt-2 space-y-1">
+                    <h5 className="text-foreground font-medium border-b border-border/60 pb-1 text-xs uppercase tracking-wide text-primary">Sobre o Studio Dantas</h5>
+                    <p className="pt-1 italic text-xs text-muted-foreground/90">
+                      "O <strong>Studio Dantas</strong> nasceu para ir muito além de uma simples esmaltação. Nosso conceito une sofisticação, materiais 100% esterilizados em autoclave e um espaço acolhedor para que cada cliente sinta que aquele momento é inteiramente dedicado ao seu bem-estar."
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Conteúdo: DÚVIDAS FREQUENTES */}
+              {activeModal === 'faq' && (
+                <div className="space-y-4">
+                  <div>
+                    <h5 className="text-foreground font-medium mb-1">Como realizo um agendamento?</h5>
+                    <p>Basta clicar em qualquer botão "Agendar Agora" aqui no site, selecionar a categoria de atendimento (Estúdio ou Home Care) e escolher seu horário na tela seguinte.</p>
+                  </div>
+                  <div className="border-t border-border/40 pt-3">
+                    <h5 className="text-foreground font-medium mb-1">Quais as formas de pagamento aceitas?</h5>
+                    <p>Aceitamos Pix, cartões de débito e crédito (com opção de parcelamento direto nas regras descritas no agendamento).</p>
+                  </div>
+                  <div className="border-t border-border/40 pt-3">
+                    <h5 className="text-foreground font-medium mb-1">Com quanta antecedência posso desmarcar?</h5>
+                    <p>Pedimos um aviso prévio de no mínimo 24 horas de antecedência para remarcações ou cancelamentos sem custos extras.</p>
+                  </div>
+                  <div className="border-t border-border/40 pt-3">
+                    <h5 className="text-foreground font-medium mb-1">Os materiais são seguros?</h5>
+                    <p>Sim, 100%. Todos os nossos instrumentos metálicos passam por rigoroso processo de lavagem, embalagem e esterilização em autoclave hospitalar.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Conteúdo: POLÍTICAS DE PRIVACIDADE */}
+              {activeModal === 'privacidade' && (
+                <>
+                  <p>
+                    A sua privacidade é extremamente importante para nós. Esta política explica de forma clara como coletamos e protegemos seus dados coletados no <strong>Studio Annika</strong>.
+                  </p>
+                  <h5 className="text-foreground font-medium mt-3 mb-1">1. Coleta de Informações</h5>
+                  <p>Armazenamos apenas as informações essenciais enviadas voluntariamente por você ao criar o agendamento, como Nome, Telefone (WhatsApp), e-mail e endereço (em caso de Home Care).</p>
+                  
+                  <h5 className="text-foreground font-medium mt-3 mb-1">2. Uso dos Dados</h5>
+                  <p>Seus dados são utilizados estritamente para confirmar seus horários, enviar lembretes automáticos de agendamento e emitir notas fiscais ou comprovantes de atendimento.</p>
+                  
+                  <h5 className="text-foreground font-medium mt-3 mb-1">3. Segurança</h5>
+                  <p>Não compartilhamos, vendemos ou expomos suas informações a terceiros. Todo o nosso sistema utiliza criptografia de ponta a ponta e servidores seguros na nuvem.</p>
+                </>
+              )}
+
+            </div>
+
+            {/* Rodapé do Modal */}
+            <div className="p-4 bg-background border-t border-border flex justify-end">
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="bg-primary/10 hover:bg-primary/20 text-primary font-medium px-5 py-2 rounded-xl transition-all text-xs"
+              >
+                Fechar Janela
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -21,9 +21,10 @@ import { BusinessHours } from './components/settings/BusinessHours';
 import { InventoryManagement } from './components/settings/InventoryManagement';
 import { InactiveClients } from './components/settings/InactiveClients';
 import { AppSettings } from './components/settings/AppSettings';
-
-// Importando a nova tela de manutenção
 import { MaintenanceScreen } from './components/MaintenanceScreen';
+
+// 🚀 CONTROLE DE PRODUÇÃO: Mude para 'true' para ativar a tela de manutenção nas abas públicas
+const IS_MAINTENANCE_MODE = true; 
 
 export default function App() {
   const [appMode, setAppMode] = useState('landing');
@@ -31,44 +32,27 @@ export default function App() {
   const [activeModal, setActiveModal] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsScreen, setSettingsScreen] = useState('main');
-  const [previousScreen, setPreviousScreen] = useState('home');
+  const [portalTargetClient, setPortalTargetClient] = useState(null);
 
-  const handleBookNow = () => {
-    setAppMode('booking');
-  };
-
-  const handleAdminLogin = () => {
-    setAppMode('admin-login');
-  };
-
-  const handleClientLogin = () => {
-    setAppMode('client-portal');
-  };
-
+  const handleBookNow = () => setAppMode('booking');
+  const handleAdminLogin = () => setAppMode('admin-login');
+  const handleClientLogin = () => setAppMode('client-portal');
+  
   const handleLogin = () => {
     setAppMode('admin-dashboard');
     setActiveScreen('home');
   };
 
-  const handleBackToLanding = () => {
-    setAppMode('landing');
-  };
+  const handleBackToLanding = () => setAppMode('landing');
 
+  // ✅ CORREÇÃO: Ativa o menu de configurações lateral/mobile perfeitamente
   const handleSettingsClick = () => {
-    setActiveScreen('app-settings');
+    setSettingsScreen('main');
+    setShowSettings(true);
   };
 
   const handleSettingsNavigate = (screen) => {
     setSettingsScreen(screen);
-  };
-
-  const handleNavigateToManagement = (screen) => {
-    setPreviousScreen('settings');
-    setActiveScreen(screen);
-  };
-
-  const handleBackFromManagement = () => {
-    setActiveScreen('settings');
   };
 
   const handleSettingsBack = () => {
@@ -87,6 +71,7 @@ export default function App() {
     }
   };
 
+  // ✅ Centralização Limpa da Renderização das Sub-telas de Configuração
   const renderSettingsScreen = () => {
     switch (settingsScreen) {
       case 'locations':
@@ -96,20 +81,20 @@ export default function App() {
       case 'inventory':
         return <InventoryManagement onBack={handleSettingsBack} />;
       case 'notes':
-        return <NotesScreen />;
+        return <NotesScreen onBack={handleSettingsBack} />;
       case 'inactive-clients':
         return <InactiveClients onBack={handleSettingsBack} />;
       case 'services':
         return (
           <div className="min-h-screen bg-background">
-            <div className="bg-white px-5 py-4 shadow-sm sticky top-0 z-10">
+            <div className="bg-white px-5 py-4 shadow-sm sticky top-0 z-10 flex flex-col gap-2">
               <button
                 onClick={handleSettingsBack}
-                className="flex items-center gap-2 text-primary hover:text-accent transition-colors mb-4"
+                className="text-left text-primary hover:text-accent text-sm font-semibold transition-colors"
               >
-                ← Voltar
+                ← Voltar para Ajustes
               </button>
-              <h2 className="text-primary text-2xl">Gestão de Serviços</h2>
+              <h2 className="text-primary text-xl font-bold">Gestão de Serviços</h2>
             </div>
             <ServiceCatalogAdmin />
           </div>
@@ -127,6 +112,7 @@ export default function App() {
     }
   };
 
+  // Renderizador principal da área de trabalho do Administrador
   const renderScreen = () => {
     switch (activeScreen) {
       case 'home':
@@ -145,39 +131,21 @@ export default function App() {
         return <DashboardScreen />;
       case 'clients':
         return <ClientsScreen />;
-      case 'notes':
-        return <NotesScreen />;
-      case 'locations':
-        return <LocationsManagement onBack={handleBackFromManagement} />;
-      case 'business-hours':
-        return <BusinessHours onBack={handleBackFromManagement} />;
-      case 'services':
-        return <ServiceCatalogAdmin onBack={handleBackFromManagement} />;
-      case 'inventory':
-        return <InventoryManagement onBack={handleBackFromManagement} />;
-      case 'inactive-clients':
-        return <InactiveClients onBack={handleBackFromManagement} />;
-      case 'settings':
-        return <SettingsScreen onNavigate={handleNavigateToManagement} onBack={() => setActiveScreen('home')} onLogout={handleLogout} />;
-      case 'app-settings':
-        return <AppSettings />;
       default:
         return (
           <HomeScreen 
             onServiceCatalogClick={() => setActiveModal('services')}
             onAutomationClick={() => setActiveModal('automation')}
             onProcessFlowClick={() => setActiveModal('process')}
-            onSettingsClick={handleSettingsClick}
-            onLogout={handleLogout}
           />
         );
     }
   };
 
-  // 1. Landing Page - Public Entry Point
+  // 1. Landing Page Pública (Ponto de entrada do cliente)
   if (appMode === 'landing') {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background dark">
         <LandingPage 
           onBookNow={handleBookNow} 
           onAdminLogin={handleAdminLogin}
@@ -187,61 +155,89 @@ export default function App() {
     );
   }
 
-  // 2. INTERCEPTADO PARA PRODUÇÃO: Portal do Cliente em Manutenção
+  // ==========================================
+  // 🛠️ INTERCEPTADOR DE FLUXOS DE MANUTENÇÃO PARA PRODUÇÃO
+  // ==========================================
+  if (IS_MAINTENANCE_MODE) {
+    if (appMode === 'client-portal' || appMode === 'booking' || appMode === 'admin-login') {
+      return <MaintenanceScreen onBack={handleBackToLanding} />;
+    }
+  }
+
   if (appMode === 'client-portal') {
-    return <MaintenanceScreen onBack={handleBackToLanding} />;
+    return <ClientPortal 
+      initialClientData={portalTargetClient} 
+      onBack={() => {
+        setPortalTargetClient(null);
+        setAppMode('booking');
+      }} 
+    />;
   }
 
-  // 3. INTERCEPTADO PARA PRODUÇÃO: Fluxo de Agendamento em Manutenção
   if (appMode === 'booking') {
-    return <MaintenanceScreen onBack={handleBackToLanding} />;
+    return <BookingScreen 
+      onBack={handleBackToLanding} 
+      onViewBooking={(clientData) => {
+        setPortalTargetClient(clientData);
+        setAppMode('client-portal');
+      }} 
+    />;
   }
 
-  // 4. INTERCEPTADO PARA PRODUÇÃO: Login do Administrador em Manutenção
   if (appMode === 'admin-login') {
-    return <MaintenanceScreen onBack={handleBackToLanding} />;
+    return <LoginScreen onLogin={handleLogin} onBack={handleBackToLanding} />;
   }
 
-  // Admin Dashboard - Sistema de Gestão Interno (Protegido)
+  // 2. Painel Administrativo Interno Seguro
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop Sidebar */}
+      {/* Sidebar para telas grandes (Desktop) */}
       <Sidebar 
         activeScreen={activeScreen} 
-        onNavigate={setActiveScreen}
+        onNavigate={(screen) => {
+          setShowSettings(false); // Fecha o painel de ajustes ao trocar de aba principal
+          setActiveScreen(screen);
+        }}
         onSettingsClick={handleSettingsClick}
         onLogout={handleLogout}
       />
 
-      {/* Main Content */}
-      <div className="lg:pl-20">
+      {/* Área de Conteúdo Principal Dinâmico */}
+      <div className="lg:pl-20 pb-20 lg:pb-0">
         <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto relative">
           {renderScreen()}
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <BottomNav activeScreen={activeScreen} onNavigate={setActiveScreen} />
+      {/* Barra de Navegação Inferior (Mobile) */}
+      <BottomNav 
+        activeScreen={showSettings ? 'settings' : activeScreen} 
+        onNavigate={(screen) => {
+          if (screen === 'settings') {
+            handleSettingsClick();
+          } else {
+            setShowSettings(false);
+            setActiveScreen(screen);
+          }
+        }} 
+      />
 
-      {/* Settings Full Screen */}
+      {/* Gaveta/Painel de Configurações em Tela Cheia */}
       {showSettings && (
-        <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
+        <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20 animate-fadeIn">
           <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
             {renderSettingsScreen()}
           </div>
         </div>
       )}
 
-      {/* Modal Overlays */}
+      {/* Modais Flutuantes disparados pelo Dashboard Home */}
       {activeModal === 'services' && (
         <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
           <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
-            <div className="sticky top-0 bg-background z-10 px-5 lg:px-8 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-primary">Catálogo de Serviços</h2>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+            <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
+              <h2 className="text-primary font-bold">Catálogo de Serviços</h2>
+              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <X className="text-gray-600" size={24} />
               </button>
             </div>
@@ -253,12 +249,9 @@ export default function App() {
       {activeModal === 'automation' && (
         <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
           <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
-            <div className="sticky top-0 bg-background z-10 px-5 lg:px-8 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-primary">Automação</h2>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+            <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
+              <h2 className="text-primary font-bold">Painel de Automações</h2>
+              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <X className="text-gray-600" size={24} />
               </button>
             </div>
@@ -270,12 +263,9 @@ export default function App() {
       {activeModal === 'process' && (
         <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
           <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
-            <div className="sticky top-0 bg-background z-10 px-5 lg:px-8 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-primary">Fluxo de Processos</h2>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+            <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
+              <h2 className="text-primary font-bold">Diagrama de Fluxos</h2>
+              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <X className="text-gray-600" size={24} />
               </button>
             </div>

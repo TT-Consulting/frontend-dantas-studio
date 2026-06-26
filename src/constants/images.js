@@ -1,11 +1,9 @@
 // src/constants/images.js
 
-
-// src/constants/images.js
-
 export { default as logo } from '../assets/PNG/logo/logo_dantas_studio_01.png';
 
-
+// --- PERFIL / QUEM SOMOS ---
+import annikaPerfil from '../assets/JPG/perfil/annika_perfil.jpg';
 
 // --- HERO CAROUSEL ---
 import carousel1 from '../assets/PNG/carousel/nail_carousel_1.png';
@@ -45,3 +43,6 @@ export const SERVICE_IMAGES = {
   art: serviceHand3,
   acrylic: serviceHand4
 };
+
+// Exportando a foto de perfil da Annika
+export { annikaPerfil };
