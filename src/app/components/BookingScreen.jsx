@@ -38,16 +38,14 @@ export function BookingScreen({ onBack, onViewBooking }) {
         setSubmitError(null);
 
         try {
-            const servicoSelecionado = selectedServices[0];
-            const idServicoFinal = servicoSelecionado.idServico || servicoSelecionado.id;
-
-            if (!idServicoFinal) {
-                throw new Error("Não foi possível determinar o ID do serviço selecionado.");
-            }
+            // Prepara a lista de serviços com seus IDs
+            const servicosList = selectedServices.map(servico => ({
+                idServico: parseInt(servico.idServico || servico.id, 10)
+            }));
 
             const idClienteFinal = selectedClient ? (selectedClient.idCliente || selectedClient.id) : null;
 
-            // ================= CORREÇÃO AQUI =================
+            
             const ano = selectedDate.getFullYear();
             const mes = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const dia = String(selectedDate.getDate()).padStart(2, '0');
@@ -63,9 +61,8 @@ export function BookingScreen({ onBack, onViewBooking }) {
                 cepAtendimento: selectedLocation === 'home' ? (address.zip.replace(/\D/g, '') || "") : null,
                 isManual: false,
 
-                servico: {
-                    idServico: parseInt(idServicoFinal, 10)
-                },
+                // Envia a lista de serviços
+                servicos: servicosList,
 
                 cliente: idClienteFinal
                     ? { idCliente: parseInt(idClienteFinal, 10) }

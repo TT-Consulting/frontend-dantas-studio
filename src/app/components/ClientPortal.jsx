@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, MapPin, Phone, ArrowLeft, UserPlus, Loader } from 'lucide-react';
-import { salvarCliente, listarClientes, atualizarCliente, apiClient } from '../../api';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, MapPin, Phone, ArrowLeft, UserPlus, Loader, HeartPulse, Home, Filter, User } from 'lucide-react';
+import { salvarCliente, listarClientes, atualizarCliente, apiClient, buscarAgendamentosPorCliente } from '../../api';
 
 export function ClientPortal({ onBack, initialClientData }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showQuickRegister, setShowQuickRegister] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' }); // success, error
+
+  // Controla se a anamnese/formulário deve ser exibido obrigatoriamente
   const [showAnamesis, setShowAnamesis] = useState(false);
+
+  // Campos editáveis principais do cliente
+  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [loginError, setLoginError] = useState(null);
@@ -13,8 +19,10 @@ export function ClientPortal({ onBack, initialClientData }) {
   // Cliente retornado do banco
   const [currentClient, setCurrentClient] = useState(null);
 
-  // ESTADO PARA AGENDAMENTOS REAIS DO BANCO
+  // Estado para agendamentos reais do banco e filtro de data
   const [appointments, setAppointments] = useState([]);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
+  const [filterDate, setFilterDate] = useState('');
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
 
   // Estados para cadastro rápido
@@ -24,50 +32,131 @@ export function ClientPortal({ onBack, initialClientData }) {
     phone: '',
   });
 
-  // Estados para anamnese
+  // Estados do formulário clínico e endereço
+  const [genero, setGenero] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
   const [allergies, setAllergies] = useState('');
-  const [ingrowingNails, setIngrowingNails] = useState('');
-  const [sensitivity, setSensitivity] = useState('');
-  const [fungus, setFungus] = useState('');
-  const [isSubmittingAnamnesis, setIsSubmittingAnamnesis] = useState(false);
+  const [condicoesSaude, setCondicoesSaude] = useState('');
 
-  // Efeito para buscar os agendamentos reais do cliente logado
+  const [ingrowingNails, setIngrowingNails] = useState('no');
+  const [sensitivity, setSensitivity] = useState('no');
+  const [fungus, setFungus] = useState('no');
+
+  const [cep, setCep] = useState('');
+  const [logradouro, setLogradouro] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [localidade, setLocalidade] = useState('');
+  const [numero, setNumero] = useState('');
+
+  const [isSubmittingAnamnesis, setIsSubmittingAnamnesis] = useState(false);
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
+
+  // Busca de CEP - Alterado para http:// para mitigar ERR_CERT_AUTHORITY_INVALID local
+  const handleCepBlur = async () => {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8) return;
+
+    setIsLoadingCep(true);
+    try {
+      const response = await fetch(`http://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await response.json();
+      if (!data.erro) {
+        setLogradouro(data.logradouro || '');
+        setBairro(data.bairro || '');
+        setLocalidade(data.localidade || '');
+      }
+    } catch (err) {
+      console.error("Erro ao buscar CEP via HTTP, tentando fallback HTTPS:", err);
+      try {
+        const responseHttps = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        const dataHttps = await responseHttps.json();
+        if (!dataHttps.erro) {
+          setLogradouro(dataHttps.logradouro || '');
+          setBairro(dataHttps.bairro || '');
+          setLocalidade(dataHttps.localidade || '');
+        }
+      } catch (fallbackErr) {
+        console.error("Falha total na busca do CEP:", fallbackErr);
+      }
+    } finally {
+      setIsLoadingCep(false);
+    }
+  };
+
+  // Sincroniza os dados do cliente atual no formulário assim que ele logar
+  useEffect(() => {
+    if (currentClient) {
+      setNome(currentClient.nome || '');
+      setEmail(currentClient.email || '');
+      setPhone(currentClient.whatsapp || '');
+      setGenero(currentClient.genero || '');
+      setDataNascimento(currentClient.dataNascimento || '');
+      setAllergies(currentClient.alergias || '');
+      setCondicoesSaude(currentClient.condicoesSaude || '');
+      setIngrowingNails(currentClient.possuiUnhasEncravadas ? 'yes' : 'no');
+      setSensitivity(currentClient.sensibilidadeExcessiva ? 'yes' : 'no');
+      setFungus(currentClient.possuiMicoseFungos ? 'yes' : 'no');
+      setCep(currentClient.cep || '');
+      setLogradouro(currentClient.logradouro || '');
+      setBairro(currentClient.bairro || '');
+      setLocalidade(currentClient.localidade || '');
+      setNumero(currentClient.numero || '');
+    }
+  }, [currentClient]);
+
+  // Carrega agendamentos do banco
   useEffect(() => {
     const carregarAgendamentosReais = async () => {
-      if (!currentClient) return;
+      if (!currentClient || showAnamesis) return;
 
       setIsLoadingAppointments(true);
       try {
-        // Traz todos os agendamentos cadastrados no sistema
-        const res = await apiClient.get('/agendamentos');
-        const todosAgendamentos = res.data || [];
-
-        // Filtra para exibir apenas os agendamentos deste cliente específico
-        const agendamentosDoCliente = todosAgendamentos.filter(
-          agendamento => agendamento.idCliente === currentClient.idCliente
-        );
-
-        // Ordena por data/hora mais recente primeiro
-        agendamentosDoCliente.sort((a, b) => new Date(b.dataHoraInicio) - new Date(a.dataHoraInicio));
+        // ✅ Chamada limpa batendo direto no ID do cliente logado
+        const agendamentosDoCliente = await buscarAgendamentosPorCliente(currentClient.idCliente);
 
         setAppointments(agendamentosDoCliente);
+        setFilteredAppointments(agendamentosDoCliente);
       } catch (err) {
-        console.error("❌ Erro ao carregar agendamentos do cliente:", err);
+        console.error("❌ Erro ao carregar agendamentos:", err);
       } finally {
         setIsLoadingAppointments(false);
       }
     };
 
     carregarAgendamentosReais();
-  }, [currentClient]);
+  }, [currentClient, showAnamesis]);
 
-  // Efeito para logar automaticamente se os dados vierem do BookingScreen
+  // Efeito para filtrar agendamentos por data
+  useEffect(() => {
+    if (!filterDate) {
+      setFilteredAppointments(appointments);
+    } else {
+      const filtrados = appointments.filter(appt => {
+        if (!appt.dataHoraInicio) return false;
+        return appt.dataHoraInicio.startsWith(filterDate);
+      });
+      setFilteredAppointments(filtrados);
+    }
+  }, [filterDate, appointments]);
+
+  // Verifica se o cliente já possui cadastro completo prévio para pular o formulário
+  const direcionarFluxoCliente = (cliente) => {
+    setCurrentClient(cliente);
+    setIsLoggedIn(true);
+
+    if (!cliente.dataNascimento && !cliente.cep && !cliente.genero) {
+      setShowAnamesis(true);
+    } else {
+      setShowAnamesis(false);
+    }
+  };
+
+  // Login automático
   useEffect(() => {
     if (initialClientData?.email || initialClientData?.phone) {
       const loginAutomatico = async () => {
         try {
           let clientes = [];
-
           if (initialClientData.phone) {
             const telefoneLimpo = initialClientData.phone.replace(/\D/g, '');
             const res = await apiClient.get('/clientes', { params: { whatsapp: telefoneLimpo } });
@@ -78,10 +167,7 @@ export function ClientPortal({ onBack, initialClientData }) {
           }
 
           if (clientes && clientes.length > 0) {
-            setCurrentClient(clientes[0]);
-            setEmail(clientes[0].email || '');
-            setPhone(clientes[0].whatsapp || '');
-            setIsLoggedIn(true);
+            direcionarFluxoCliente(clientes[0]);
           }
         } catch (err) {
           console.error("Erro no login automático:", err);
@@ -91,7 +177,7 @@ export function ClientPortal({ onBack, initialClientData }) {
     }
   }, [initialClientData]);
 
-  // LOGIN INTEGRADO
+  // Login Manual
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError(null);
@@ -109,11 +195,7 @@ export function ClientPortal({ onBack, initialClientData }) {
       }
 
       if (clientes && clientes.length > 0) {
-        const clienteEncontrado = clientes[0];
-        setCurrentClient(clienteEncontrado);
-        setEmail(clienteEncontrado.email || '');
-        setPhone(clienteEncontrado.whatsapp || '');
-        setIsLoggedIn(true);
+        direcionarFluxoCliente(clientes[0]);
       } else {
         setLoginError('⚠️ Cliente não encontrado. Verifique os dados ou realize o Cadastro Rápido.');
       }
@@ -123,15 +205,15 @@ export function ClientPortal({ onBack, initialClientData }) {
     }
   };
 
-  // CADASTRO RÁPIDO INTEGRADO
+  // Cadastro Rápido
   const handleQuickRegister = async (e) => {
     e.preventDefault();
-    if (registerData.name && registerData.phone) {
+    if (registerData.name && registerData.phone && registerData.email) {
       try {
         const payloadCliente = {
           idCliente: null,
           nome: registerData.name,
-          email: registerData.email || null,
+          email: registerData.email.trim(),
           whatsapp: registerData.phone.replace(/\D/g, ''),
           genero: null,
           dataNascimento: null,
@@ -150,18 +232,16 @@ export function ClientPortal({ onBack, initialClientData }) {
 
         const novoCliente = await salvarCliente(payloadCliente);
         setCurrentClient(novoCliente);
-        setEmail(novoCliente.email || '');
-        setPhone(novoCliente.whatsapp || '');
-
-        setShowQuickRegister(false);
+        setIsLoggedIn(true);
         setShowAnamesis(true);
+        setShowQuickRegister(false);
       } catch (err) {
-        alert('❌ Erro ao realizar cadastro. Verifique se o WhatsApp já não está cadastrado.');
+        showToast('❌ Erro ao realizar cadastro. Verifique se o WhatsApp ou E-mail já não estão cadastrados.', 'error');
       }
     }
   };
 
-  // SALVAR ANAMNESE INTEGRADO
+  // Salvar Formulário Completo
   const handleAnamesisSave = async (e) => {
     e.preventDefault();
     if (!currentClient) return;
@@ -170,23 +250,32 @@ export function ClientPortal({ onBack, initialClientData }) {
     try {
       const payloadAtualizado = {
         ...currentClient,
-        email: email || currentClient.email,
-        whatsapp: phone.replace(/\D/g, '') || currentClient.whatsapp,
+        nome: nome,
+        email: email.trim(),
+        whatsapp: phone.replace(/\D/g, ''),
+        genero: genero || null,
+        dataNascimento: dataNascimento || null,
         alergias: allergies || null,
-        possuiUnhasEncravadas: ingrowingNails === 'yes' || ingrowingNails === 'sometimes',
-        sensibilidadeExcessiva: sensitivity === 'yes' || sensitivity === 'mild',
+        condicoesSaude: condicoesSaude || null,
+        possuiUnhasEncravadas: ingrowingNails === 'yes',
+        sensibilidadeExcessiva: sensitivity === 'yes',
         possuiMicoseFungos: fungus === 'yes',
+        cep: cep || null,
+        logradouro: logradouro || null,
+        bairro: bairro || null,
+        localidade: localidade || null,
+        numero: numero || null,
         isAtivo: true
       };
 
-      await atualizarCliente(currentClient.idCliente, payloadAtualizado);
+      const clienteSalvo = await atualizarCliente(currentClient.idCliente, payloadAtualizado);
+      setCurrentClient(clienteSalvo);
 
-      alert('🎉 Ficha de saúde preenchida com sucesso!');
+      showToast('🎉 Perfil atualizado com sucesso!', 'success');
       setShowAnamesis(false);
-      setIsLoggedIn(true);
     } catch (error) {
-      console.error('Erro ao salvar anamnese:', error);
-      alert('Erro ao salvar ficha de saúde. Verifique o console.');
+      console.error('Erro ao salvar formulário completo:', error);
+      showToast('Erro ao salvar alterações.', 'error');
     } finally {
       setIsSubmittingAnamnesis(false);
     }
@@ -196,7 +285,6 @@ export function ClientPortal({ onBack, initialClientData }) {
     setRegisterData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Mapeia o status do Kotlin para a interface visual
   const getStatusBadge = (status) => {
     switch (status?.toUpperCase()) {
       case 'CONFIRMADO':
@@ -224,10 +312,31 @@ export function ClientPortal({ onBack, initialClientData }) {
     return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // --- RENDERS DE CADASTRO E ANAMNESE PERMANECEM IDENTICOS ---
+  // Função para exibir toast
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
+
+  // Componente Toast
+  const Toast = () => {
+    if (!toast.show) return null;
+    const bgColor = toast.type === 'success' ? 'bg-green-500' : 'bg-red-500';
+    return (
+      <div className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-2 animate-fade-in`}>
+        {toast.type === 'success' ? <CheckCircle size={20} /> : <XCircle size={20} />}
+        <span className="font-medium">{toast.message}</span>
+      </div>
+    );
+  };
+
+  // 1️⃣ FLUXO: CADASTRO RÁPIDO
   if (!isLoggedIn && showQuickRegister) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <>
+        <div className="min-h-screen bg-gray-50">
         <div className="bg-white px-5 py-4 shadow-sm">
           <button onClick={() => setShowQuickRegister(false)} className="flex items-center gap-2 text-primary hover:text-accent transition-colors">
             <ArrowLeft size={20} />
@@ -256,13 +365,14 @@ export function ClientPortal({ onBack, initialClientData }) {
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">E-mail (Opcional)</label>
+                <label className="text-sm text-gray-600 mb-2 block">E-mail *</label>
                 <input
                   type="email"
                   value={registerData.email}
                   onChange={(e) => handleRegisterChange('email', e.target.value)}
                   placeholder="seu@email.com"
                   className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
                 />
               </div>
               <div>
@@ -283,74 +393,184 @@ export function ClientPortal({ onBack, initialClientData }) {
           </div>
         </div>
       </div>
+      <Toast />
+    </>
     );
   }
 
-  if (!isLoggedIn && showAnamesis) {
+  // 2️⃣ FLUXO: FORMULÁRIO DE FORMATAÇÃO / ANAMNESE E EDIÇÃO COMPLETA
+  if (isLoggedIn && showAnamesis) {
     return (
+      <>
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white px-5 py-4 shadow-sm">
-          <button onClick={() => { setShowAnamesis(false); setShowQuickRegister(true); }} className="flex items-center gap-2 text-primary hover:text-accent transition-colors">
+          <button onClick={() => setShowAnamesis(false)} className="flex items-center gap-2 text-primary hover:text-accent transition-colors">
             <ArrowLeft size={20} />
-            <span>Voltar</span>
+            <span>Voltar para o Portal</span>
           </button>
         </div>
         <div className="px-5 pt-6 pb-24">
           <div className="max-w-md mx-auto">
             <div className="text-center mb-8">
-              <h2 className="text-primary text-2xl mb-2">Ficha de Saúde</h2>
-              <p className="text-gray-600 text-sm">Informações de anamnese cruciais para o atendimento</p>
+              <h2 className="text-primary text-2xl mb-2">Meus Dados & Ficha</h2>
+              <p className="text-gray-600 text-sm">Gerencie suas informações cadastrais e ficha clínica abaixo</p>
             </div>
+
             <form onSubmit={handleAnamesisSave} className="space-y-6">
-              <div>
-                <label className="text-sm text-gray-600 mb-2 block font-semibold">Alergias Conhecidas</label>
-                <textarea
-                  value={allergies}
-                  onChange={(e) => setAllergies(e.target.value)}
-                  placeholder="Ex: Tolueno, formaldeído, látex, acrílico..."
-                  className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  rows={2}
-                />
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 space-y-4 shadow-sm">
+                <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 border-b pb-2">
+                  <User size={16} /> Dados Cadastrais
+                </h3>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Nome Completo</label>
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">E-mail</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">WhatsApp / Telefone</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Gênero</label>
+                    <select value={genero} onChange={(e) => setGenero(e.target.value)} className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary">
+                      <option value="">Selecione</option>
+                      <option value="Feminino">Feminino</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Outro">Outro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Data de Nascimento</label>
+                    <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary" />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-gray-600 mb-2 block font-semibold">Possui unhas encravadas recorrentes?</label>
-                <select value={ingrowingNails} onChange={(e) => setIngrowingNails(e.target.value)} className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">Selecione</option>
-                  <option value="yes">Sim</option>
-                  <option value="no">Não</option>
-                  <option value="sometimes">Às vezes</option>
-                </select>
+
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 space-y-4 shadow-sm">
+                <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 border-b pb-2">
+                  <HeartPulse size={16} /> Questionário de Saúde
+                </h3>
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 mb-1 block">Alergias Conhecidas</label>
+                  <textarea
+                    value={allergies}
+                    onChange={(e) => setAllergies(e.target.value)}
+                    placeholder="Ex: Esmaltes, formaldeído, látex..."
+                    className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary resize-none"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 mb-1 block">Condições de Saúde</label>
+                  <textarea
+                    value={condicoesSaude}
+                    onChange={(e) => setCondicoesSaude(e.target.value)}
+                    placeholder="Ex: Diabetes, Gestante, Hipertensão..."
+                    className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary resize-none"
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-3 pt-1">
+                  <div className="flex justify-between items-center gap-2">
+                    <label className="text-xs text-gray-600">Possui unhas encravadas recorrentes?</label>
+                    <select value={ingrowingNails} onChange={(e) => setIngrowingNails(e.target.value)} className="p-1.5 text-xs bg-white rounded-lg border border-gray-200 focus:outline-primary w-24">
+                      <option value="no">Não</option>
+                      <option value="yes">Sim</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between items-center gap-2">
+                    <label className="text-xs text-gray-600">Sensibilidade excessiva?</label>
+                    <select value={sensitivity} onChange={(e) => setSensitivity(e.target.value)} className="p-1.5 text-xs bg-white rounded-lg border border-gray-200 focus:outline-primary w-24">
+                      <option value="no">Não</option>
+                      <option value="yes">Sim</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between items-center gap-2">
+                    <label className="text-xs text-gray-600">Micose ou fungos ativos?</label>
+                    <select value={fungus} onChange={(e) => setFungus(e.target.value)} className="p-1.5 text-xs bg-white rounded-lg border border-gray-200 focus:outline-primary w-24">
+                      <option value="no">Não</option>
+                      <option value="yes">Sim</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-gray-600 mb-2 block font-semibold">Sensibilidade excessiva nas mãos ou pés?</label>
-                <select value={sensitivity} onChange={(e) => setSensitivity(e.target.value)} className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">Selecione</option>
-                  <option value="yes">Sim</option>
-                  <option value="no">Não</option>
-                  <option value="mild">Leve</option>
-                </select>
+
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 space-y-4 shadow-sm">
+                <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 border-b pb-2">
+                  <Home size={16} /> Endereço Residencial
+                </h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-1">
+                    <label className="text-xs text-gray-500 mb-1 block">CEP</label>
+                    <input
+                      type="text"
+                      value={cep}
+                      onChange={(e) => setCep(e.target.value)}
+                      onBlur={handleCepBlur}
+                      placeholder="00000-000"
+                      className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs text-gray-500 mb-1 block">Logradouro</label>
+                    <input type="text" value={logradouro} onChange={(e) => setLogradouro(e.target.value)} placeholder="Rua / Avenida" disabled={isLoadingCep} className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary disabled:bg-gray-50" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-1">
+                    <label className="text-xs text-gray-500 mb-1 block">Número</label>
+                    <input type="text" value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Nº" className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs text-gray-500 mb-1 block">Bairro</label>
+                    <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} placeholder="Bairro" disabled={isLoadingCep} className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary disabled:bg-gray-50" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Cidade / Localidade</label>
+                  <input type="text" value={localidade} onChange={(e) => setLocalidade(e.target.value)} placeholder="Cidade" disabled={isLoadingCep} className="w-full p-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-primary disabled:bg-gray-50" />
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-gray-600 mb-2 block font-semibold">Micose ou fungos ativos?</label>
-                <select value={fungus} onChange={(e) => setFungus(e.target.value)} className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">Selecione</option>
-                  <option value="yes">Sim</option>
-                  <option value="no">Não</option>
-                </select>
-              </div>
+
               <button type="submit" disabled={isSubmittingAnamnesis} className="w-full bg-accent text-white py-4 rounded-xl shadow-lg hover:shadow-xl transition-all font-medium disabled:opacity-50 flex items-center justify-center gap-2">
                 {isSubmittingAnamnesis && <Loader size={18} className="animate-spin" />}
-                <span>{isSubmittingAnamnesis ? 'Salvando ficha...' : 'Finalizar e Ver Perfil'}</span>
+                <span>{isSubmittingAnamnesis ? 'Salvando dados...' : 'Confirmar e Salvar Perfil'}</span>
               </button>
             </form>
           </div>
         </div>
       </div>
+      <Toast />
+    </>
     );
   }
 
+  // 3️⃣ FLUXO: TELA DE LOGIN
   if (!isLoggedIn) {
     return (
+      <>
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white px-5 py-4 shadow-sm">
           <button onClick={onBack} className="flex items-center gap-2 text-primary hover:text-accent transition-colors">
@@ -362,7 +582,7 @@ export function ClientPortal({ onBack, initialClientData }) {
           <div className="max-w-md mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-primary text-2xl mb-2">Área do Cliente</h2>
-              <p className="text-gray-600 text-sm">Insira seus dados para rastrear e gerenciar agendamentos</p>
+              <p className="text-gray-600 text-sm">Insira seus dados para acessar</p>
             </div>
             {loginError && <div className="mb-4 p-4 bg-red-50 text-red-700 border border-red-200 text-sm rounded-xl">{loginError}</div>}
             <form onSubmit={handleLogin} className="space-y-4">
@@ -370,7 +590,6 @@ export function ClientPortal({ onBack, initialClientData }) {
                 <label className="text-sm text-gray-600 mb-2 block">WhatsApp ou E-mail</label>
                 <input
                   type="text"
-                  value={email || phone}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val.includes('@')) { setEmail(val); setPhone(''); }
@@ -382,7 +601,7 @@ export function ClientPortal({ onBack, initialClientData }) {
                 />
               </div>
               <button type="submit" className="w-full bg-accent text-white py-4 rounded-xl shadow-lg hover:shadow-xl transition-all font-semibold">
-                Acessar Meus Agendamentos
+                Acessar Portal
               </button>
             </form>
             <div className="mt-8 p-4 bg-purple-50 rounded-xl text-center">
@@ -394,25 +613,58 @@ export function ClientPortal({ onBack, initialClientData }) {
           </div>
         </div>
       </div>
+      <Toast />
+    </>
     );
   }
 
-  // --- TELA LOGADA: EXIBIÇÃO DE DADOS REAIS DO BACKEND ---
+  // 4️⃣ FLUXO FINAL: PORTAL DO CLIENTE (DASHBOARD)
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white px-5 py-4 shadow-sm flex justify-between items-center">
         <button onClick={onBack} className="flex items-center gap-2 text-primary hover:text-accent transition-colors">
           <ArrowLeft size={20} />
           <span>Voltar</span>
         </button>
-        <button onClick={() => { setIsLoggedIn(false); setCurrentClient(null); setAppointments([]); }} className="text-gray-500 text-sm hover:text-primary transition-colors">
-          Sair
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowAnamesis(true)} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-semibold hover:bg-primary/20">
+            Editar Meu Perfil / Ficha
+          </button>
+          <button onClick={() => { setIsLoggedIn(false); setCurrentClient(null); setAppointments([]); }} className="text-gray-500 text-sm hover:text-primary transition-colors px-2">
+            Sair
+          </button>
+        </div>
       </div>
 
-      <div className="px-5 pt-6 pb-4">
+      <div className="px-5 pt-6 pb-2">
         <h2 className="text-primary mb-1 text-xl font-bold">Olá, {currentClient?.nome || 'Cliente'}!</h2>
         <p className="text-gray-500 text-sm">{currentClient?.email || currentClient?.whatsapp}</p>
+      </div>
+
+      <div className="px-5 my-4">
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-gray-700 text-sm font-medium">
+            <Filter size={16} className="text-primary" />
+            <span>Filtrar agendamentos por data:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="px-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-primary text-gray-700"
+            />
+            {filterDate && (
+              <button
+                onClick={() => setFilterDate('')}
+                className="text-xs text-red-500 hover:underline font-medium"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="px-5 pb-8">
@@ -423,45 +675,117 @@ export function ClientPortal({ onBack, initialClientData }) {
             <Loader size={24} className="animate-spin text-primary" />
             <p className="text-sm">Buscando seus agendamentos no sistema...</p>
           </div>
-        ) : appointments.length === 0 ? (
+        ) : filteredAppointments.length === 0 ? (
           <div className="text-center bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-gray-500 text-sm">
-            📭 Você ainda não possui nenhum agendamento cadastrado.
+            📭 Nenhum agendamento encontrado para os critérios selecionados.
           </div>
         ) : (
           <div className="space-y-3">
-            {appointments.map((appointment) => (
-              <div key={appointment.idAgendamento} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    {/* Lendo direto da propriedade flat do DTO */}
-                    <h4 className="text-primary font-bold mb-1">
-                      {appointment.nomeServico || 'Serviço Personalizado'}
-                    </h4>
-                    <p className="text-gray-500 text-xs">
-                      Local: {appointment.tipoLocal === 'DOMICILIO' ? '🏠 Atendimento em Domicílio' : '🏢 No Studio'}
-                    </p>
-                  </div>
-                  {getStatusBadge(appointment.statusAgendamento || appointment.status)}
-                </div>
+            {filteredAppointments.map((appointment) => {
+              // Calcula o valor total dos serviços
+              let totalServicos = 0;
+              if (appointment.servicos && appointment.servicos.length > 0) {
+                totalServicos = appointment.servicos.reduce((acc, servico) => {
+                  return acc + (servico.precoBase || servico.preco || servico.valor || 0);
+                }, 0);
+              } else {
+                totalServicos = (
+                  appointment.precoBase ||
+                  appointment.valor ||
+                  appointment.preco ||
+                  appointment.servico?.precoBase ||
+                  appointment.servico?.preco ||
+                  appointment.servico?.valor ||
+                  0
+                );
+              }
 
-                <div className="space-y-2 text-gray-600 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-primary" />
-                    <span>{formatDate(appointment.dataHoraInicio)}</span>
+              // Adiciona taxa de deslocamento
+              const taxaDeslocamento = appointment.taxaDeslocamento || 0;
+              const totalFinal = totalServicos + taxaDeslocamento;
+
+              return (
+                <div key={appointment.idAgendamento} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      {/* Verifica se há múltiplos serviços */}
+                      {appointment.servicos && appointment.servicos.length > 1 ? (
+                        <h4 className="text-primary font-bold mb-1">
+                          {appointment.servicos.length} Serviços Selecionados
+                        </h4>
+                      ) : (
+                        <h4 className="text-primary font-bold mb-1">
+                          {appointment.nomeServico || appointment.servico?.nomeServico || appointment.servico?.nome || 'Serviço Personalizado'}
+                        </h4>
+                      )}
+                      <p className="text-gray-500 text-xs">
+                        Local: {appointment.tipoLocal === 'DOMICILIO' ? '🏠 Atendimento em Domicílio' : '🏢 No Studio'}
+                      </p>
+                    </div>
+                    {getStatusBadge(appointment.statusAgendamento || appointment.status)}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-primary" />
-                    <span>{formatTime(appointment.dataHoraInicio)}</span>
-                  </div>
-                  <div className="text-accent font-semibold">
-                    R$ {(appointment.valorTotal || appointment.precoBase || 0).toFixed(2)}
+
+                  <div className="space-y-3 text-gray-600 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={16} className="text-primary" />
+                      <span>{formatDate(appointment.dataHoraInicio)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock size={16} className="text-primary" />
+                      <span>{formatTime(appointment.dataHoraInicio)}</span>
+                    </div>
+
+                    {/* Lista de serviços selecionados */}
+                    <div className="border-t pt-3 mt-2">
+                      <p className="text-xs font-semibold text-gray-500 mb-2">Serviço(s):</p>
+                      {appointment.servicos && appointment.servicos.length > 0 ? (
+                        <div className="space-y-1">
+                          {appointment.servicos.map((servico, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs p-1.5 bg-gray-50 rounded-lg">
+                              <span>{servico.nomeServico || servico.nome}</span>
+                              <span className="text-accent font-bold">
+                                R$ {(servico.precoBase || servico.preco || servico.valor || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center text-xs p-1.5 bg-gray-50 rounded-lg">
+                          <span>{appointment.nomeServico || appointment.servico?.nomeServico || appointment.servico?.nome || 'Serviço Personalizado'}</span>
+                          <span className="text-accent font-bold">
+                            R$ {(
+                              appointment.precoBase ||
+                              appointment.valor ||
+                              appointment.preco ||
+                              appointment.servico?.precoBase ||
+                              appointment.servico?.preco ||
+                              appointment.servico?.valor ||
+                              0
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Valor total */}
+                    <div className="text-accent font-bold text-lg pt-2 border-t">
+                      Total: R$ {totalFinal.toFixed(2)}
+                      {/* Adiciona taxa de deslocamento se houver */}
+                      {taxaDeslocamento > 0 && (
+                        <span className="text-xs text-gray-500 block">
+                          (inclui taxa de deslocamento de R$ {taxaDeslocamento.toFixed(2)})
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
+    <Toast />
+    </>
   );
 }

@@ -1,30 +1,46 @@
-import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, Loader } from 'lucide-react';
+// Adicione o 'useMemo' dentro das chaves do 'react'
+import { useState, useEffect, useMemo } from 'react'; 
+import { Calendar as CalendarIcon, Clock, Loader, CalendarX } from 'lucide-react';
 import { buscarDisponibilidade } from '../../api';
 
 export function DateTimeSelection({ selectedServices, selectedDate, setSelectedDate, selectedTime, setSelectedTime, onNext }) {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false); // ✅ Controle para saber se já rodou a busca
 
   useEffect(() => {
     if (!selectedDate || selectedServices.length === 0) return;
 
     const carregarSlots = async () => {
       setSlotsLoading(true);
+      setHasSearched(false);
       try {
-        const dataStr = selectedDate.toISOString().split('T')[0];
-        const idServico = selectedServices[0].idServico || selectedServices[0].id;
-        const slots = await buscarDisponibilidade(dataStr, idServico);
+        const ano = selectedDate.getFullYear();
+        const mes = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const dia = String(selectedDate.getDate()).padStart(2, '0');
+        const dataStr = `${ano}-${mes}-${dia}`;
+
+        const idsDosServicos = selectedServices.map(
+          (servico) => parseInt(servico.idServico || servico.id, 10)
+        );
+
+        const slots = await buscarDisponibilidade(dataStr, idsDosServicos);
         setAvailableSlots(slots);
       } catch (err) {
         console.error("Erro ao carregar slots livres:", err);
       } finally {
         setSlotsLoading(false);
+        setHasSearched(true); // ✅ Busca finalizada
       }
     };
 
     carregarSlots();
   }, [selectedDate, selectedServices]);
+
+  // ✅ Filtra para ver se existe pelo menos um horário com 'disponivel = true'
+  const possuiHorariosLivres = useMemo(() => {
+    return availableSlots.some(slot => slot.disponivel === true);
+  }, [availableSlots]);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -37,7 +53,10 @@ export function DateTimeSelection({ selectedServices, selectedDate, setSelectedD
         <input 
           type="date" 
           className="w-full p-3 border border-gray-200 rounded-xl focus:outline-primary"
-          onChange={(e) => setSelectedDate(new Date(e.target.value))}
+          onChange={(e) => {
+            setSelectedDate(new Date(e.target.value));
+            setSelectedTime(''); // Limpa o horário se mudar a data
+          }}
         />
       </div>
 
@@ -50,7 +69,15 @@ export function DateTimeSelection({ selectedServices, selectedDate, setSelectedD
 
           {slotsLoading ? (
             <div className="flex justify-center py-6"><Loader className="animate-spin text-primary" /></div>
+          ) : hasSearched && !possuiHorariosLivres ? (
+            // 🚨 ✅ ESTADO VAZIO: Mensagem amigável caso não haja nenhuma vaga no dia
+            <div className="flex flex-col items-center justify-center text-center py-8 px-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 animate-fadeIn">
+              <CalendarX className="text-gray-400 mb-2" size={36} />
+              <p className="text-sm font-medium text-gray-600">Nenhum horário disponível para este dia.</p>
+              <p className="text-xs text-gray-400 mt-1">Todos os horários estão preenchidos ou o Studio estará fechado. Por favor, selecione outra data!</p>
+            </div>
           ) : (
+            // 🔑 Exibe a grade se houver horários
             <div className="grid grid-cols-3 gap-2">
               {availableSlots.map((slot) => (
                 <button
@@ -75,7 +102,7 @@ export function DateTimeSelection({ selectedServices, selectedDate, setSelectedD
 
       <button
         onClick={onNext}
-        disabled={!selectedDate || !selectedTime}
+        disabled={!selectedDate || !selectedTime || (hasSearched && !possuiHorariosLivres)}
         className="w-full bg-accent text-white py-4 rounded-xl font-semibold shadow-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
       >
         Avançar para Identificação

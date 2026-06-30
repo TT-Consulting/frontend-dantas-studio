@@ -24,7 +24,7 @@ import { AppSettings } from './components/settings/AppSettings';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 
 // 🚀 CONTROLE DE PRODUÇÃO: Mude para 'true' para ativar a tela de manutenção nas abas públicas
-const IS_MAINTENANCE_MODE = true; 
+const IS_MAINTENANCE_MODE = false; 
 
 export default function App() {
   const [appMode, setAppMode] = useState('landing');
@@ -121,6 +121,8 @@ export default function App() {
             onServiceCatalogClick={() => setActiveModal('services')}
             onAutomationClick={() => setActiveModal('automation')}
             onProcessFlowClick={() => setActiveModal('process')}
+            onSettingsClick={handleSettingsClick}
+            onLogout={handleLogout}
           />
         );
       case 'calendar':
@@ -137,6 +139,8 @@ export default function App() {
             onServiceCatalogClick={() => setActiveModal('services')}
             onAutomationClick={() => setActiveModal('automation')}
             onProcessFlowClick={() => setActiveModal('process')}
+            onSettingsClick={handleSettingsClick}
+            onLogout={handleLogout}
           />
         );
     }

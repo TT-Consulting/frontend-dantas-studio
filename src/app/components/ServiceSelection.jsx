@@ -27,25 +27,38 @@ export function ServiceSelection({ selectedServices, setSelectedServices, onNext
     return ['all', ...Array.from(cats)];
   }, [services]);
 
-  // 1. CORREÇÃO DO FILTRO (Usando nomeServico)
   const servicosFiltrados = useMemo(() => {
     return services.filter(s => {
-      // Como o DTO não trouxe o campo 'descricao', validamos apenas o nomeServico
       const batePesquisa = s.nomeServico?.toLowerCase().includes(searchTerm.toLowerCase());
       const bateCategoria = selectedCategory === 'all' || s.categoria === selectedCategory;
       return batePesquisa && bateCategoria;
     });
   }, [services, searchTerm, selectedCategory]);
 
+  // ✅ MODIFICADO: Agora permite marcar/desmarcar múltiplos serviços
   const toggleService = (servico) => {
-    setSelectedServices([servico]);
+    const idServicoAtual = servico.idServico || servico.id;
+    
+    const jaSelecionado = selectedServices.some(
+      item => (item.idServico || item.id) === idServicoAtual
+    );
+
+    if (jaSelecionado) {
+      // Remove o serviço da lista
+      setSelectedServices(prev => 
+        prev.filter(item => (item.idServico || item.id) !== idServicoAtual)
+      );
+    } else {
+      // Adiciona o novo serviço mantendo os anteriores
+      setSelectedServices(prev => [...prev, servico]);
+    }
   };
 
   if (loading) return <div className="text-center py-10 text-gray-500">A carregar serviços...</div>;
 
   return (
     <div className="space-y-4 animate-fadeIn">
-      <h2 className="text-xl font-bold text-gray-900">Selecione o Serviço</h2>
+      <h2 className="text-xl font-bold text-gray-900">Selecione o(s) Serviço(s)</h2>
       
       {/* Barra de Pesquisa */}
       <div className="relative">
@@ -87,7 +100,6 @@ export function ServiceSelection({ selectedServices, setSelectedServices, onNext
               }`}
             >
               <div className="space-y-1 pr-4">
-                {/* 2. CORREÇÃO AQUI: Trocado s.nome por s.nomeServico */}
                 <h3 className="font-bold text-gray-800">{s.nomeServico}</h3>
                 <p className="text-xs text-gray-400">{s.categoria || 'Geral'}</p>
                 <div className="flex items-center gap-1 text-xs text-gray-500 pt-1">
@@ -123,7 +135,7 @@ export function ServiceSelection({ selectedServices, setSelectedServices, onNext
             disabled={selectedServices.length === 0}
             className="w-full bg-accent text-white py-4 rounded-xl font-semibold shadow-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
-            Avançar para Local
+            Avançar para Local ({selectedServices.length})
           </button>
         </div>
       </div>

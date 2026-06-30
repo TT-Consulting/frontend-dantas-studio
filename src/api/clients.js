@@ -1,11 +1,9 @@
 import { apiClient } from './axiosConfig';
 
-// ========================= Clientes e Anamnese ========================
-
 /**
  * GET /clientes
- * Listar clientes cadastrados (permite filtro opcional por nome)
- * @param {string} nome - Nome para filtro (opcional)
+ * Retorna uma lista de clientes. Permite o uso de um parâmetro opcional de texto para filtrar por nome.
+ * @param {string} nome - Nome ou trecho de texto para filtragem de registros (Opcional).
  */
 export const listarClientes = (nome = '') =>
   apiClient
@@ -18,8 +16,8 @@ export const listarClientes = (nome = '') =>
 
 /**
  * GET /clientes/{id}
- * Buscar os detalhes de um cliente individual por ID
- * @param {number|string} id - ID do cliente
+ * Obtém os detalhes completos de cadastro de um cliente individual (útil para ler a ficha de anamnese).
+ * @param {number|string} id - ID único do cliente.
  */
 export const buscarClientePorId = (id) =>
   apiClient
@@ -32,8 +30,8 @@ export const buscarClientePorId = (id) =>
 
 /**
  * POST /clientes
- * Salvar/Cadastrar um novo cliente no sistema
- * @param {Object} clienteDTO - Dados do cliente
+ * Salva e registra um novo cliente no banco de dados do sistema.
+ * @param {Object} clienteDTO - Objeto contendo os dados pessoais e ficha inicial de anamnese do cliente.
  */
 export const salvarCliente = (clienteDTO) =>
   apiClient
@@ -46,9 +44,9 @@ export const salvarCliente = (clienteDTO) =>
 
 /**
  * PUT /clientes/{id}
- * Atualizar os dados cadastrais de um cliente existente
- * @param {number|string} id - ID do cliente
- * @param {Object} clienteDTO - Dados atualizados do cliente
+ * Altera ou atualiza as informações cadastrais e dados de contato de um cliente já existente.
+ * @param {number|string} id - ID do cliente que está sendo editado.
+ * @param {Object} clienteDTO - Dados atualizados a serem gravados por cima do registro antigo.
  */
 export const atualizarCliente = (id, clienteDTO) =>
   apiClient
@@ -60,42 +58,35 @@ export const atualizarCliente = (id, clienteDTO) =>
     });
 
 /**
- * PATCH /clientes/{id}/inativar
- * Alternar status do cliente para INATIVO (Seguindo o padrão de rotas da aplicação)
- * @param {number|string} id - ID do cliente
+ * PATCH /clientes/{id}/{status}
+ * Método dinâmico unificado para gerenciar o estado do cliente. Alterna a flag de atividade entre 'ativar' ou 'inativar'.
+ * @param {number|string} id - ID único do cliente.
+ * @param {boolean} activar - Controla qual endpoint chamar. Se true chama '/ativar', se false chama '/inativar'.
  */
-export const inativarCliente = (id) =>
+export const alternarStatusCliente = (id, activar = true) =>
   apiClient
-    .patch(`/clientes/${id}/inativar`)
+    .patch(`/clientes/${id}/${activar ? 'ativar' : 'inativar'}`)
     .then((res) => res.data)
     .catch((err) => {
-      console.error(`❌ Erro ao inativar cliente ${id}:`, err);
+      console.error(`❌ Erro ao alterar status do cliente ${id}:`, err);
       throw err;
     });
 
 /**
- * PATCH /clientes/{id}/ativar
- * Alternar status do cliente para ATIVO
- * @param {number|string} id - ID do cliente
+ * ALIAS: inativarCliente
+ * Encapsula a chamada dinamicamente enviando 'false' para desativar o cadastro do cliente.
  */
-export const ativarCliente = (id) =>
-  apiClient
-    .patch(`/clientes/${id}/ativar`)
-    .then((res) => res.data)
-    .catch((err) => {
-      console.error(`❌ Erro ao ativar cliente ${id}:`, err);
-      throw err;
-    });
+export const inativarCliente = (id) => alternarStatusCliente(id, false);
 
-/* ========================================================================
-   NOTA DE COMPATIBILIDADE:
-   Os métodos abaixo complementam a estrutura antiga baseada em rotas customizadas,
-   caso seu backend utilize mapeamentos específicos para buscas ou filtros.
-   ======================================================================== */
+/**
+ * ALIAS: ativarCliente
+ * Encapsula a chamada dinamicamente enviando 'true' para reativar o cadastro do cliente.
+ */
+export const ativarCliente = (id) => alternarStatusCliente(id, true);
 
 /**
  * GET /clientes/inativos
- * Buscar listagem específica de clientes inativados
+ * Retorna uma lista contendo exclusivamente os clientes que foram arquivados ou marcados como inativos.
  */
 export const listarClientesInativos = () =>
   apiClient
@@ -108,8 +99,8 @@ export const listarClientesInativos = () =>
 
 /**
  * GET /clientes/busca
- * Buscar clientes através de um termo ou query de pesquisa abrangente
- * @param {string} query - Termo de busca (nome, cpf, etc)
+ * Permite realizar buscas complexas e abrangentes no cadastro usando queries flexíveis (como CPF, Email ou telefone).
+ * @param {string} query - Termo ou palavra-chave utilizada no mecanismo de busca interna.
  */
 export const pesquisarClientes = (query) =>
   apiClient

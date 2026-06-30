@@ -133,6 +133,16 @@ export function ClientIdentification({ selectedClient, setSelectedClient, newCli
             onChange={(e) => setNewClientForm({ ...newClientForm, fullName: e.target.value })}
             className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:outline-primary"
           />
+          
+          {/* ✅ Adicionado campo de E-mail obrigatório para o backend */}
+          <input
+            type="email"
+            placeholder="E-mail *"
+            value={newClientForm.email || ''}
+            onChange={(e) => setNewClientForm({ ...newClientForm, email: e.target.value })}
+            className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:outline-primary"
+          />
+
           <input
             type="text"
             placeholder="WhatsApp / Telefone *"
@@ -144,7 +154,7 @@ export function ClientIdentification({ selectedClient, setSelectedClient, newCli
           {/* Anamnese Simplificada */}
           <div className="space-y-1 pt-2">
             <label className="text-xs font-bold text-gray-600 flex items-center gap-1">
-              <AlertCircle size={14} className="text-amber-500" /> Possui alergia a esmalte ou gel?
+              <AlertCircle size={14} className="text-amber-500" /> Possui allergy a esmalte ou gel?
             </label>
             <select
               value={newClientForm.anamnese}
@@ -164,7 +174,8 @@ export function ClientIdentification({ selectedClient, setSelectedClient, newCli
         <div className="max-w-md mx-auto">
           <button
             onClick={onFinalize}
-            disabled={isSubmitting || (!isNewClient && !selectedClient) || (isNewClient && !newClientForm.fullName)}
+            /* ✅ Validação ajustada para exigir também o email se for nova cliente */
+            disabled={isSubmitting || (!isNewClient && !selectedClient) || (isNewClient && (!newClientForm.fullName || !newClientForm.email))}
             className={`w-full py-4 rounded-xl shadow-lg transition-all font-semibold flex items-center justify-center gap-2 ${
               !isSubmitting ? 'bg-accent text-white hover:shadow-xl' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}

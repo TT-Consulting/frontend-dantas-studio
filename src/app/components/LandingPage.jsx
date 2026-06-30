@@ -76,14 +76,14 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-background/90 backdrop-blur-md z-40 px-5 py-2 flex justify-between items-center border-b border-border shadow-md">
         <div className="flex items-center gap-4">
-          <img 
-            src={logo} 
-            alt="Logo Studio Annika" 
-            className="h-14 sm:h-16 w-auto object-contain drop-shadow-[0_2px_8px_rgba(255,255,255,0.15)] transition-all" 
+          <img
+            src={logo}
+            alt="Logo Studio Annika"
+            className="h-14 sm:h-16 w-auto object-contain drop-shadow-[0_2px_8px_rgba(255,255,255,0.15)] transition-all"
           />
           <h1 className="text-primary text-xl tracking-wide font-medium hidden sm:block">Studio Annika</h1>
         </div>
-        <button 
+        <button
           onClick={() => setMenuOpen(true)}
           className="p-2 hover:bg-white/5 rounded-lg transition-colors"
         >
@@ -159,9 +159,8 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
           {CAROUSEL_IMAGES.map((imgUrl, index) => (
             <div
               key={index}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-              }`}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                }`}
             >
               <img
                 src={imgUrl}
@@ -192,9 +191,8 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                  index === currentSlide ? 'bg-accent w-6' : 'bg-white/40'
-                }`}
+                className={`w-2.5 h-2.5 rounded-full transition-all ${index === currentSlide ? 'bg-accent w-6' : 'bg-white/40'
+                  }`}
               />
             ))}
           </div>
@@ -321,7 +319,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
 
         <div className="max-w-md md:max-w-4xl mx-auto relative group/nav">
           <div className="overflow-hidden relative rounded-xl">
-            <div 
+            <div
               className="flex md:grid md:grid-cols-2 gap-5 transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${currentLocationSlide * 100}%)` }}
             >
@@ -336,8 +334,8 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                     <div className="flex items-start gap-3 mb-4">
                       <div>
                         <p className="text-foreground font-medium text-sm mb-0.5">Edifício Comercial</p>
-                        <p className="text-muted-foreground text-sm">Av. Rebouças, 2469 - Pinheiros</p>
-                        <p className="text-muted-foreground/60 text-xs">São Paulo - SP, 05401-350</p>
+                        <p className="text-muted-foreground text-sm">Al. dos Jurupis, 1413 - Moema</p>
+                        <p className="text-muted-foreground/60 text-xs">São Paulo - SP, 04088-003</p>
                       </div>
                     </div>
 
@@ -351,9 +349,9 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                     </div>
                   </div>
 
-                  <a 
-                    href="https://maps.app.goo.gl/41NRN8qHm58SDExQA" 
-                    target="_blank" 
+                  <a
+                    href="https://maps.app.goo.gl/83TkNb5KCLYX1AJS8"
+                    target="_blank"
                     rel="noreferrer"
                     className="w-full bg-primary/10 hover:bg-primary/20 text-primary text-center font-medium py-3 rounded-xl block border border-primary/20 transition-all text-sm"
                   >
@@ -370,7 +368,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                       <Home size={16} className="text-accent" />
                       <span>Atendimento VIP a Domicílio</span>
                     </div>
-                    
+
                     <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
                       Leve a experiência completa do estúdio para o conforto da sua casa. Atendimento exclusivo com materiais 100% esterilizados.
                     </p>
@@ -387,9 +385,9 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                     </div>
                   </div>
 
-                  <a 
+                  <a
                     href={whatsappUrl}
-                    target="_blank" 
+                    target="_blank"
                     rel="noreferrer"
                     className="w-full bg-accent text-white text-center font-medium py-3 rounded-xl block shadow-md hover:bg-accent/90 transition-all text-sm flex items-center justify-center gap-2"
                   >
@@ -401,13 +399,13 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
             </div>
           </div>
 
-          <button 
+          <button
             onClick={() => setCurrentLocationSlide(0)}
             className={`absolute left-[-15px] top-1/2 -translate-y-1/2 p-1.5 rounded-full border border-border bg-background shadow-md transition-all z-10 md:hidden ${currentLocationSlide === 0 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
           >
             <ChevronLeft size={18} />
           </button>
-          <button 
+          <button
             onClick={() => setCurrentLocationSlide(1)}
             className={`absolute right-[-15px] top-1/2 -translate-y-1/2 p-1.5 rounded-full border border-border bg-background shadow-md transition-all z-10 md:hidden ${currentLocationSlide === 1 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
           >
@@ -438,7 +436,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
       {/* Footer Estilo Corporativo Baseado na imagem image_ac233a.png */}
       <footer className="bg-card border-t border-border pt-16 pb-24 md:pb-16 px-6 sm:px-12">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
-          
+
           {/* Coluna 1: Logo e Descrição */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -547,7 +545,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop Escuro */}
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setActiveModal(null)}></div>
-          
+
           {/* Conteúdo do Modal */}
           <div className="bg-card w-full max-w-lg rounded-2xl border border-border shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
             {/* Cabeçalho do Modal */}
@@ -557,7 +555,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                 {activeModal === 'faq' && 'Dúvidas Frequentes (FAQ)'}
                 {activeModal === 'privacidade' && 'Políticas de Privacidade'}
               </h3>
-              <button 
+              <button
                 onClick={() => setActiveModal(null)}
                 className="p-1.5 hover:bg-white/5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -567,16 +565,16 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
 
             {/* Corpo com Scroll */}
             <div className="p-6 overflow-y-auto space-y-4 text-sm text-muted-foreground leading-relaxed">
-              
+
               {/* Conteúdo: QUEM SOMOS (Atualizado com as informações da Annika) */}
               {activeModal === 'quem-somos' && (
                 <div className="flex flex-col items-center text-center space-y-4">
                   {/* Foto Circular da Annika */}
                   <div className="w-36 h-36 relative flex-shrink-0 mb-2">
                     <div className="absolute inset-0 bg-primary/20 rounded-full blur-sm transform scale-105"></div>
-                    <img 
-                      src={annikaPerfil} 
-                      alt="Annika Dantas" 
+                    <img
+                      src={annikaPerfil}
+                      alt="Annika Dantas"
                       className="w-full h-full object-cover rounded-full border-4 border-primary/30 shadow-md relative z-10"
                     />
                   </div>
@@ -636,19 +634,27 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                 <div className="space-y-4">
                   <div>
                     <h5 className="text-foreground font-medium mb-1">Como realizo um agendamento?</h5>
-                    <p>Basta clicar em qualquer botão "Agendar Agora" aqui no site, selecionar a categoria de atendimento (Estúdio ou Home Care) e escolher seu horário na tela seguinte.</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      O processo é simples e intuitivo: clique em uma das opções de agendamento disponíveis em nossa plataforma, selecione a modalidade ideal (Atendimento no Estúdio ou Home Care) e escolha o dia e horário de sua preferência para reservar o seu momento.
+                    </p>
                   </div>
                   <div className="border-t border-border/40 pt-3">
                     <h5 className="text-foreground font-medium mb-1">Quais as formas de pagamento aceitas?</h5>
-                    <p>Aceitamos Pix, cartões de débito e crédito (com opção de parcelamento direto nas regras descritas no agendamento).</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Para sua comodidade, disponibilizamos pagamentos via Pix, cartões de débito e crédito — com opções de parcelamento sob consulta diretamente na tela de finalização.
+                    </p>
                   </div>
                   <div className="border-t border-border/40 pt-3">
                     <h5 className="text-foreground font-medium mb-1">Com quanta antecedência posso desmarcar?</h5>
-                    <p>Pedimos um aviso prévio de no mínimo 24 horas de antecedência para remarcações ou cancelamentos sem custos extras.</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Para mantermos a excelência e organização dos horários, solicitamos que cancelamentos ou remarcações sejam realizados com, no mínimo, 24 horas de antecedência.
+                    </p>
                   </div>
                   <div className="border-t border-border/40 pt-3">
                     <h5 className="text-foreground font-medium mb-1">Os materiais são seguros?</h5>
-                    <p>Sim, 100%. Todos os nossos instrumentos metálicos passam por rigoroso processo de lavagem, embalagem e esterilização em autoclave hospitalar.</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Sua saúde é nossa prioridade absoluta. Todos os nossos instrumentos metálicos passam por um rigoroso processo de higienização, são embalados individualmente e esterilizados em autoclave com padrão hospitalar.
+                    </p>
                   </div>
                 </div>
               )}
@@ -661,10 +667,10 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                   </p>
                   <h5 className="text-foreground font-medium mt-3 mb-1">1. Coleta de Informações</h5>
                   <p>Armazenamos apenas as informações essenciais enviadas voluntariamente por você ao criar o agendamento, como Nome, Telefone (WhatsApp), e-mail e endereço (em caso de Home Care).</p>
-                  
+
                   <h5 className="text-foreground font-medium mt-3 mb-1">2. Uso dos Dados</h5>
                   <p>Seus dados são utilizados estritamente para confirmar seus horários, enviar lembretes automáticos de agendamento e emitir notas fiscais ou comprovantes de atendimento.</p>
-                  
+
                   <h5 className="text-foreground font-medium mt-3 mb-1">3. Segurança</h5>
                   <p>Não compartilhamos, vendemos ou expomos suas informações a terceiros. Todo o nosso sistema utiliza criptografia de ponta a ponta e servidores seguros na nuvem.</p>
                 </>
@@ -674,7 +680,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
 
             {/* Rodapé do Modal */}
             <div className="p-4 bg-background border-t border-border flex justify-end">
-              <button 
+              <button
                 onClick={() => setActiveModal(null)}
                 className="bg-primary/10 hover:bg-primary/20 text-primary font-medium px-5 py-2 rounded-xl transition-all text-xs"
               >
