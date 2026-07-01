@@ -8,6 +8,7 @@ export function ClientsTab({
   filteredClients, 
   openClientDetails, 
   handleNewClientClick,
+  handleToggleStatus,
   clientsLoading,
   clientsError
 }) {
@@ -68,10 +69,9 @@ export function ClientsTab({
             {filteredClients.map((client) => (
               <div
                 key={client.id}
-                onClick={() => openClientDetails(client)}
-                className="bg-white rounded-xl p-4 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow"
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-3 cursor-pointer" onClick={() => openClientDetails(client)}>
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
                       <span className="text-primary font-semibold text-lg">
@@ -81,6 +81,9 @@ export function ClientsTab({
                     <div>
                       <p className="text-gray-800 font-medium">{client.name}</p>
                       <p className="text-gray-600 text-sm">{client.phone}</p>
+                      {client.localidade && (
+                        <p className="text-gray-500 text-xs">{client.localidade}</p>
+                      )}
                     </div>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs ${client.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
@@ -106,7 +109,7 @@ export function ClientsTab({
                       <Edit2 className="text-primary" size={16} />
                     </button>
                     <button 
-                      onClick={(e) => { e.stopPropagation(); }} 
+                      onClick={(e) => handleToggleStatus(client, e)} 
                       className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <UserX className="text-red-500" size={16} />

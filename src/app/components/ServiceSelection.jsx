@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Clock, Plus, Check } from 'lucide-react';
+import { Search, Clock, Plus, Check, Scissors, Sparkles, Layers } from 'lucide-react';
 import { listarServicosAtivos } from '../../api';
 
 export function ServiceSelection({ selectedServices, setSelectedServices, onNext }) {
@@ -22,6 +22,20 @@ export function ServiceSelection({ selectedServices, setSelectedServices, onNext
     carregarServicos();
   }, []);
 
+  // Mapeamento de Ícones dinâmicos para as categorias (igual ao de locais)
+  const getCategoryIcon = (categoria) => {
+    switch (categoria?.toLowerCase()) {
+      case 'alongamento':
+      case 'alongamentos':
+        return <Sparkles size={14} />;
+      case 'unhas':
+      case 'manicure':
+        return <Scissors size={14} />;
+      default:
+        return <Layers size={14} />;
+    }
+  };
+
   const categorias = useMemo(() => {
     const cats = new Set(services.map(s => s.categoria).filter(Boolean));
     return ['all', ...Array.from(cats)];
@@ -35,7 +49,6 @@ export function ServiceSelection({ selectedServices, setSelectedServices, onNext
     });
   }, [services, searchTerm, selectedCategory]);
 
-  // ✅ MODIFICADO: Agora permite marcar/desmarcar múltiplos serviços
   const toggleService = (servico) => {
     const idServicoAtual = servico.idServico || servico.id;
     
@@ -44,12 +57,10 @@ export function ServiceSelection({ selectedServices, setSelectedServices, onNext
     );
 
     if (jaSelecionado) {
-      // Remove o serviço da lista
       setSelectedServices(prev => 
         prev.filter(item => (item.idServico || item.id) !== idServicoAtual)
       );
     } else {
-      // Adiciona o novo serviço mantendo os anteriores
       setSelectedServices(prev => [...prev, servico]);
     }
   };
@@ -72,42 +83,73 @@ export function ServiceSelection({ selectedServices, setSelectedServices, onNext
         />
       </div>
 
-      {/* Categorias Pills */}
+      {/* Categorias Pills com Ícones */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
         {categorias.map(cat => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
               selectedCategory === cat ? 'bg-primary text-white' : 'bg-white text-gray-500 border border-gray-100'
             }`}
           >
+            {cat !== 'all' && getCategoryIcon(cat)}
             {cat === 'all' ? 'Todos' : cat}
           </button>
         ))}
       </div>
 
       {/* Lista de Serviços */}
-      <div className="space-y-3">
+      <div className="space-y-3 pb-24">
         {servicosFiltrados.map(s => {
           const isSelected = selectedServices.some(item => (item.idServico || item.id) === (s.idServico || s.id));
+          // Tenta pegar a URL da imagem da API (prioriza fotoUrl, depois urlImagem, depois imagem)
+          const imagemUrl = s.fotoUrl || s.urlImagem || s.imagem;
+
           return (
             <div
               key={s.idServico || s.id}
               onClick={() => toggleService(s)}
-              className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer flex justify-between items-center ${
+              className={`p-3 bg-white rounded-2xl border transition-all cursor-pointer flex items-center gap-4 ${
                 isSelected ? 'border-primary bg-purple-50/40 shadow-sm' : 'border-gray-100 hover:border-gray-200'
               }`}
             >
-              <div className="space-y-1 pr-4">
-                <h3 className="font-bold text-gray-800">{s.nomeServico}</h3>
-                <p className="text-xs text-gray-400">{s.categoria || 'Geral'}</p>
+              {/* Box de Imagem do Serviço */}
+              <div className="w-20 h-20 rounded-xl bg-purple-50 overflow-hidden flex items-center justify-center flex-shrink-0 border border-gray-50">
+                {imagemUrl ? (
+                  <img 
+                    src={imagemUrl} 
+                    alt={s.nomeServico} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback caso o link quebre ou dê erro
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div 
+                  className="w-full h-full flex items-center justify-center text-primary"
+                  style={{ display: imagemUrl ? 'none' : 'flex' }}
+                >
+                  <Sparkles size={24} />
+                </div>
+              </div>
+
+              {/* Informações do Conteúdo */}
+              <div className="flex-1 min-w-0 pr-2 space-y-0.5">
+                <h3 className="font-bold text-gray-800 text-sm md:text-base truncate">{s.nomeServico}</h3>
+                <p className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                  {getCategoryIcon(s.categoria)} {s.categoria || 'Geral'}
+                </p>
                 <div className="flex items-center gap-1 text-xs text-gray-500 pt-1">
                   <Clock size={12} /> {s.duracaoMinutos || 60} min
                 </div>
               </div>
-              <div className="text-right flex items-center gap-3">
-                <span className="font-extrabold text-primary whitespace-nowrap">
+
+              {/* Lado Direito: Preço e Seletor */}
+              <div className="text-right flex items-center gap-3 flex-shrink-0">
+                <span className="font-extrabold text-primary text-sm whitespace-nowrap">
                   {s.precoBase ? `R$ ${s.precoBase.toFixed(2)}` : 'Grátis'}
                 </span>
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
@@ -133,7 +175,7 @@ export function ServiceSelection({ selectedServices, setSelectedServices, onNext
           <button
             onClick={onNext}
             disabled={selectedServices.length === 0}
-            className="w-full bg-accent text-white py-4 rounded-xl font-semibold shadow-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="w-full bg-accent text-white py-4 rounded-xl font-semibold shadow-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
           >
             Avançar para Local ({selectedServices.length})
           </button>

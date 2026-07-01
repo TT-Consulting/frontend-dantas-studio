@@ -12,6 +12,12 @@ export function FinanceScreen() {
     retiradaPessoal: 0.0
   });
   const [loading, setLoading] = useState(true);
+  const [refreshCount, setRefreshCount] = useState(0);
+
+  const handleTransactionChange = async () => {
+    setRefreshCount(prev => prev + 1);
+    await carregarResumo();
+  };
 
   const carregarResumo = async () => {
     try {
@@ -27,13 +33,14 @@ export function FinanceScreen() {
 
   useEffect(() => {
     carregarResumo();
-  }, []);
+    setRefreshCount(prev => prev + 1);
+  }, [activeTab]);
 
   return (
-    <div className="bg-[#FFF8DC] min-h-screen pb-10">
+    <div className="bg-background min-h-screen pb-10">
       
       {/* Top Tabs e Mini Dashboard */}
-      <div className="sticky top-0 bg-[#FFF8DC] px-5 lg:px-8 pt-6 pb-3 z-30 space-y-4">
+      <div className="sticky top-0 bg-background px-5 lg:px-8 pt-6 pb-3 z-30 space-y-4">
         
         {/* Cards Rápidos de Indicadores */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -90,12 +97,10 @@ export function FinanceScreen() {
 
       {/* Seção de Conteúdo */}
       <div className="px-5 lg:px-8 pt-2">
-        {loading ? (
-          <div className="text-center py-10 text-gray-500">Carregando dados financeiros...</div>
-        ) : activeTab === 'expenses' ? (
-          <ExpensesScreen onTransactionChange={carregarResumo} />
+        {activeTab === 'expenses' ? (
+          <ExpensesScreen onTransactionChange={handleTransactionChange} refreshTrigger={refreshCount} />
         ) : (
-          <ReceivablesScreen onTransactionChange={carregarResumo} />
+          <ReceivablesScreen onTransactionChange={handleTransactionChange} refreshTrigger={refreshCount} />
         )}
       </div>
     </div>

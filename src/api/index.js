@@ -45,7 +45,8 @@ export {
   financeAPI,
   listarFluxoCaixa,
   registrarMovimentacaoFinanceira,
-  obterResumoFinanceiro
+  obterResumoFinanceiro,
+  listarDespesasFiltradas
 } from './finance';
 
 // 5. ESTOQUE E INSUMOS (Novo módulo extraído)

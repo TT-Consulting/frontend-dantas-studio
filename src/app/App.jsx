@@ -24,7 +24,7 @@ import { AppSettings } from './components/settings/AppSettings';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 
 // 🚀 CONTROLE DE PRODUÇÃO: Mude para 'true' para ativar a tela de manutenção nas abas públicas
-const IS_MAINTENANCE_MODE = false; 
+const IS_MAINTENANCE_MODE = false;
 
 export default function App() {
   const [appMode, setAppMode] = useState('landing');
@@ -37,7 +37,7 @@ export default function App() {
   const handleBookNow = () => setAppMode('booking');
   const handleAdminLogin = () => setAppMode('admin-login');
   const handleClientLogin = () => setAppMode('client-portal');
-  
+
   const handleLogin = () => {
     setAppMode('admin-dashboard');
     setActiveScreen('home');
@@ -69,6 +69,10 @@ export default function App() {
       setAppMode('landing');
       setActiveScreen('home');
     }
+  };
+
+  const handleVerProximosAgendamentos = () => {
+    setActiveScreen('calendar');
   };
 
   // ✅ Centralização Limpa da Renderização das Sub-telas de Configuração
@@ -103,8 +107,8 @@ export default function App() {
         return <AppSettings onBack={handleSettingsBack} />;
       default:
         return (
-          <SettingsScreen 
-            onBack={() => setShowSettings(false)} 
+          <SettingsScreen
+            onBack={() => setShowSettings(false)}
             onNavigate={handleSettingsNavigate}
             onLogout={handleLogout}
           />
@@ -117,12 +121,13 @@ export default function App() {
     switch (activeScreen) {
       case 'home':
         return (
-          <HomeScreen 
+          <HomeScreen
             onServiceCatalogClick={() => setActiveModal('services')}
             onAutomationClick={() => setActiveModal('automation')}
             onProcessFlowClick={() => setActiveModal('process')}
             onSettingsClick={handleSettingsClick}
             onLogout={handleLogout}
+            onVerProximosAgendamentos={handleVerProximosAgendamentos}
           />
         );
       case 'calendar':
@@ -133,14 +138,17 @@ export default function App() {
         return <DashboardScreen />;
       case 'clients':
         return <ClientsScreen />;
+      case 'notes': 
+        return <NotesScreen />; 
       default:
         return (
-          <HomeScreen 
+          <HomeScreen
             onServiceCatalogClick={() => setActiveModal('services')}
             onAutomationClick={() => setActiveModal('automation')}
             onProcessFlowClick={() => setActiveModal('process')}
             onSettingsClick={handleSettingsClick}
             onLogout={handleLogout}
+            onVerProximosAgendamentos={handleVerProximosAgendamentos}
           />
         );
     }
@@ -150,8 +158,8 @@ export default function App() {
   if (appMode === 'landing') {
     return (
       <div className="min-h-screen bg-background dark">
-        <LandingPage 
-          onBookNow={handleBookNow} 
+        <LandingPage
+          onBookNow={handleBookNow}
           onAdminLogin={handleAdminLogin}
           onClientLogin={handleClientLogin}
         />
@@ -169,22 +177,22 @@ export default function App() {
   }
 
   if (appMode === 'client-portal') {
-    return <ClientPortal 
-      initialClientData={portalTargetClient} 
+    return <ClientPortal
+      initialClientData={portalTargetClient}
       onBack={() => {
         setPortalTargetClient(null);
         setAppMode('booking');
-      }} 
+      }}
     />;
   }
 
   if (appMode === 'booking') {
-    return <BookingScreen 
-      onBack={handleBackToLanding} 
+    return <BookingScreen
+      onBack={handleBackToLanding}
       onViewBooking={(clientData) => {
         setPortalTargetClient(clientData);
         setAppMode('client-portal');
-      }} 
+      }}
     />;
   }
 
@@ -196,8 +204,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar para telas grandes (Desktop) */}
-      <Sidebar 
-        activeScreen={activeScreen} 
+      <Sidebar
+        activeScreen={activeScreen}
         onNavigate={(screen) => {
           setShowSettings(false); // Fecha o painel de ajustes ao trocar de aba principal
           setActiveScreen(screen);
@@ -214,8 +222,8 @@ export default function App() {
       </div>
 
       {/* Barra de Navegação Inferior (Mobile) */}
-      <BottomNav 
-        activeScreen={showSettings ? 'settings' : activeScreen} 
+      <BottomNav
+        activeScreen={showSettings ? 'settings' : activeScreen}
         onNavigate={(screen) => {
           if (screen === 'settings') {
             handleSettingsClick();
@@ -223,7 +231,7 @@ export default function App() {
             setShowSettings(false);
             setActiveScreen(screen);
           }
-        }} 
+        }}
       />
 
       {/* Gaveta/Painel de Configurações em Tela Cheia */}

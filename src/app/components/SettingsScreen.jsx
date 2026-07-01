@@ -1,4 +1,4 @@
-import { MapPin, Clock, Scissors, Package, UserX, ChevronRight, ArrowLeft, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { MapPin, Clock, Scissors, Package, UserX, ChevronRight, ArrowLeft, Settings as SettingsIcon, LogOut, FileText } from 'lucide-react';
 
 export function SettingsScreen({ onBack, onNavigate, onLogout }) {
   const settingsOptions = [
@@ -33,6 +33,14 @@ export function SettingsScreen({ onBack, onNavigate, onLogout }) {
       icon: Package,
       color: 'bg-green-100',
       iconColor: 'text-green-600',
+    },
+    {
+      id: 'notes',
+      title: 'Notas',
+      description: 'Anote lembretes e informações importantes',
+      icon: FileText,
+      color: 'bg-yellow-100',
+      iconColor: 'text-yellow-600',
     },
     {
       id: 'inactive-clients',

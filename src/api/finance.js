@@ -42,6 +42,25 @@ export const financeAPI = {
         console.error('❌ Erro ao obter resumo financeiro mensal:', err);
         throw err;
       }),
+
+  /**
+* GET /financeiro/despesas
+* Busca a listagem de despesas aplicando filtros de visualização e limites para o histórico.
+* @param {string} filtro - Tipos aceitos: 'TODAS', 'STUDIO', 'PESSOAL', 'MES_ATUAL'
+* @param {number} limite - Opcional, quantidade máxima de registros para retornar (ex: 10)
+*/
+  listarDespesas: (filtro = 'TODAS', limite = null) => {
+    const params = { filtro };
+    if (limite) params.limite = limite;
+
+    return apiClient
+      .get('/financeiro/despesas', { params })
+      .then((res) => res.data)
+      .catch((err) => {
+        console.error('❌ Erro ao obter despesas filtradas:', err);
+        throw err;
+      });
+  }
 };
 
 /**
@@ -51,3 +70,4 @@ export const financeAPI = {
 export const listarFluxoCaixa = financeAPI.listarPorPeriodo;
 export const registrarMovimentacaoFinanceira = financeAPI.registrarTransacao;
 export const obterResumoFinanceiro = financeAPI.obterResumoMensal;
+export const listarDespesasFiltradas = financeAPI.listarDespesas;

@@ -1,38 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, DollarSign, AlertCircle } from 'lucide-react';
+import { financeAPI } from '../../api';
 
-export function ReceivablesScreen() {
+export function ReceivablesScreen({ onTransactionChange, refreshTrigger = 0 }) {
   const [activeTab, setActiveTab] = useState('receive');
+  const [receivables, setReceivables] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [paidItems, setPaidItems] = useState([]);
 
-  const receivables = [
-    { id: '1', client: 'Maria Silva', amount: 'R$ 120', dueDate: '2025-12-20', status: 'pending' },
-    { id: '2', client: 'Ana Costa', amount: 'R$ 85', dueDate: '2025-12-15', status: 'overdue' },
-    { id: '3', client: 'Julia Santos', amount: 'R$ 150', dueDate: '2025-12-22', status: 'pending' },
-    { id: '4', client: 'Carla Oliveira', amount: 'R$ 95', dueDate: '2025-12-18', status: 'overdue' },
-    { id: '5', client: 'Beatriz Lima', amount: 'R$ 200', dueDate: '2025-12-25', status: 'pending' },
-  ];
-
-  const credits = [
-    { id: '1', client: 'Patricia Alves', amount: 'R$ 300', sessions: '3 sessions left' },
-    { id: '2', client: 'Fernanda Rocha', amount: 'R$ 450', sessions: '5 sessions left' },
-    { id: '3', client: 'Sofia Martins', amount: 'R$ 180', sessions: '2 sessions left' },
-    { id: '4', client: 'Isabela Santos', amount: 'R$ 600', sessions: '6 sessions left' },
-  ];
-
-  const togglePaid = (id) => {
-    setPaidItems(prev =>
-      prev.includes(id)
-        ? prev.filter(itemId => itemId !== id)
-        : [...prev, id]
-    );
+  const carregarReceitas = async () => {
+    try {
+      setLoading(true);
+      const hoje = new Date();
+      const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+      const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
+      
+      const transacoes = await financeAPI.listarPorPeriodo(primeiroDiaMes, ultimoDiaMes);
+      const receitas = transacoes.filter(t => t.tipoTransacao === 'RECEITA');
+      setReceivables(receitas);
+    } catch (err) {
+      console.error('❌ Erro ao carregar receitas:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const overdueCount = receivables.filter(r => r.status === 'overdue').length;
-  const totalReceivables = receivables.reduce(
-    (sum, r) => sum + parseInt(r.amount.replace(/\D/g, '')),
-    0
-  );
+  useEffect(() => {
+    carregarReceitas();
+  }, [refreshTrigger]);
+
+  const togglePaid = async (id) => {
+    if (paidItems.includes(id)) {
+      setPaidItems(prev => prev.filter(itemId => itemId !== id));
+    } else {
+      setPaidItems(prev => [...prev, id]);
+    }
+  };
+
+  const totalReceivables = receivables.reduce((sum, r) => sum + (r.valor || 0), 0);
+  const overdueCount = 0;
 
   return (
     <div className="pb-24 px-5">
@@ -85,78 +91,40 @@ export function ReceivablesScreen() {
 
       {/* To Receive Tab */}
       {activeTab === 'receive' && (
-        <div className="space-y-3">
-          {receivables.map((item) => (
-            <div
-              key={item.id}
-              className={`bg-white rounded-xl p-4 shadow-md transition-all ${
-                paidItems.includes(item.id) ? 'opacity-50' : ''
-              }`}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <p className="text-primary">{item.client}</p>
-                  <p className="text-gray-600 text-sm mt-1">Due: {item.dueDate}</p>
-                  {item.status === 'overdue' && (
-                    <div className="flex items-center gap-1 mt-2">
-                      <AlertCircle size={14} className="text-red-500" />
-                      <span className="text-red-500 text-xs">Vencido</span>
-                    </div>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p
-                    className={`text-xl ${
-                      item.status === 'overdue' ? 'text-red-500' : 'text-gray-800'
-                    }`}
-                  >
-                    {item.amount}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => togglePaid(item.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  paidItems.includes(item.id)
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-accent text-white hover:shadow-lg'
+        loading ? (
+          <div className="text-center py-10 text-gray-500">Carregando receitas...</div>
+        ) : (
+          <div className="space-y-3">
+            {receivables.map((item) => (
+              <div
+                key={item.idTransacao}
+                className={`bg-white rounded-xl p-4 shadow-md transition-all ${
+                  paidItems.includes(item.idTransacao) ? 'opacity-50' : ''
                 }`}
               >
-                <Check size={16} />
-                <span className="text-sm">
-                  {paidItems.includes(item.id) ? 'Pago' : 'Marcar como Pago'}
-                </span>
-              </button>
-            </div>
-          ))}
-        </div>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <p className="text-primary">{item.descricao}</p>
+                    <p className="text-gray-600 text-sm mt-1">Data: {item.dataCompetencia}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl text-gray-800">
+                      R$ {item.valor.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* Prepaid Credits Tab */}
       {activeTab === 'credits' && (
         <div className="space-y-3">
-          {credits.map((credit) => (
-            <div key={credit.id} className="bg-white rounded-xl p-4 shadow-md">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <p className="text-primary">{credit.client}</p>
-                  <p className="text-gray-600 text-sm mt-1">{credit.sessions}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl text-gray-800">{credit.amount}</p>
-                  <span className="inline-block px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs mt-1">
-                    Ativo
-                  </span>
-                </div>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-accent h-2 rounded-full"
-                  style={{ width: `${(parseInt(credit.sessions) / 6) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-          ))}
+          <div className="bg-white rounded-xl p-4 shadow-md">
+            <p className="text-gray-600 text-center">Funcionalidade de créditos pré-pagos em desenvolvimento</p>
+          </div>
         </div>
       )}
     </div>
