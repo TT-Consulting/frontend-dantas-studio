@@ -1,10 +1,143 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, Trash2, Edit2, Globe, Search, Loader2, Image as ImageIcon, ArrowLeft, Check, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext'; // 🌟 Hook de idioma (única adição)
 // Ajustado de editarLocal para atualizarLocal conforme exportado pela sua API
 import { listarLocais, salvarLocal, alternarStatusLocal, atualizarLocal } from '../../../api';
 import axios from 'axios';
 
+// 🌟 Dicionário de traduções — a única coisa adicionada em relação à versão que já funcionava.
+// Toda a lógica de dados (JSON no enderecoCompleto, links combinados com '||') foi mantida
+// exatamente como estava, porque é ela que salva CEP e imagem corretamente.
+const localTranslations = {
+  'pt-BR': {
+    title: 'Locais de Atendimento',
+    subtitle: 'Gerencie seus estúdios físicos e pontos fixos',
+    btnNew: 'Novo Estúdio',
+    formTitleNew: 'Cadastrar Novo Ponto Comercial',
+    formTitleEdit: 'Editar Ponto Comercial',
+    labelName: 'Nome do Estabelecimento *',
+    placeholderName: 'Ex: Studio Moema Premium',
+    labelCep: 'CEP *',
+    labelStreet: 'Rua / Logradouro',
+    placeholderStreet: 'Preenchido via CEP',
+    labelNumber: 'Número *',
+    placeholderNumber: 'Nº 123',
+    labelDistrict: 'Bairro',
+    placeholderDistrict: 'Bairro',
+    labelCityUf: 'Cidade / UF',
+    placeholderCityUf: 'Cidade - UF',
+    labelFee: 'Taxa de Balcão / Adicional (R$)',
+    labelMapsLink: 'Link de Localização (Google Maps URL)',
+    labelImageUrl: 'URL da Imagem do Local (Fachada/Interno)',
+    placeholderImageUrl: 'https://imagens.com/foto-estudio.jpg',
+    btnCancel: 'Cancelar',
+    btnUpdate: 'Atualizar Local',
+    btnSave: 'Salvar Local de Atendimento',
+    loadingList: 'Buscando locais cadastrados...',
+    emptyTitle: 'Nenhum estúdio físico ou ponto de atendimento fixo cadastrado.',
+    emptySubtitle: 'Cadastre seu primeiro endereço comercial para exibição nas agendas.',
+    badgeActive: 'Ativo',
+    btnMaps: 'Ver no Maps',
+    feeLabel: 'Taxa fixa de balcão: R$',
+    cepShort: 'CEP',
+    alertRequired: 'Por favor, preencha os campos obrigatórios.',
+    alertCepNotFound: 'CEP não encontrado.',
+    alertCepError: 'Erro ao buscar informações do CEP.',
+    alertUpdateSuccess: 'Ponto de atendimento atualizado com sucesso!',
+    alertCreateSuccess: 'Ponto de atendimento cadastrado com sucesso!',
+    alertUpdateError: 'Não foi possível atualizar o local.',
+    alertCreateError: 'Não foi possível salvar o local.',
+    alertToggleConfirm: 'Deseja realmente desativar este local de atendimento?',
+    alertToggleError: 'Erro ao alterar status do local.'
+  },
+  'en-US': {
+    title: 'Service Locations',
+    subtitle: 'Manage your physical studios and fixed locations',
+    btnNew: 'New Studio',
+    formTitleNew: 'Register New Business Location',
+    formTitleEdit: 'Edit Business Location',
+    labelName: 'Business Name *',
+    placeholderName: 'E.g.: Studio Moema Premium',
+    labelCep: 'ZIP Code *',
+    labelStreet: 'Street Address',
+    placeholderStreet: 'Filled via ZIP Code',
+    labelNumber: 'Building Number *',
+    placeholderNumber: 'No. 123',
+    labelDistrict: 'Neighborhood',
+    placeholderDistrict: 'Neighborhood',
+    labelCityUf: 'City / State',
+    placeholderCityUf: 'City - State',
+    labelFee: 'Front Desk / Additional Fee ($)',
+    labelMapsLink: 'Location Link (Google Maps URL)',
+    labelImageUrl: 'Location Image URL (Facade/Interior)',
+    placeholderImageUrl: 'https://images.com/studio-photo.jpg',
+    btnCancel: 'Cancel',
+    btnUpdate: 'Update Location',
+    btnSave: 'Save Service Location',
+    loadingList: 'Loading registered locations...',
+    emptyTitle: 'No physical studio or fixed service location registered.',
+    emptySubtitle: 'Register your first business address to show it in the schedule.',
+    badgeActive: 'Active',
+    btnMaps: 'View on Maps',
+    feeLabel: 'Fixed front desk fee: $',
+    cepShort: 'ZIP',
+    alertRequired: 'Please fill in the required fields.',
+    alertCepNotFound: 'ZIP Code not found.',
+    alertCepError: 'Error fetching ZIP Code information.',
+    alertUpdateSuccess: 'Location updated successfully!',
+    alertCreateSuccess: 'Location registered successfully!',
+    alertUpdateError: 'Could not update the location.',
+    alertCreateError: 'Could not save the location.',
+    alertToggleConfirm: 'Do you really want to deactivate this service location?',
+    alertToggleError: 'Error changing location status.'
+  },
+  'es-ES': {
+    title: 'Lugares de Atención',
+    subtitle: 'Gestione sus estudios físicos y puntos fijos',
+    btnNew: 'Nuevo Estudio',
+    formTitleNew: 'Registrar Nuevo Punto Comercial',
+    formTitleEdit: 'Editar Punto Comercial',
+    labelName: 'Nombre del Establecimiento *',
+    placeholderName: 'Ej: Studio Moema Premium',
+    labelCep: 'Código Postal *',
+    labelStreet: 'Calle / Avenida',
+    placeholderStreet: 'Completado vía Código Postal',
+    labelNumber: 'Número *',
+    placeholderNumber: 'N.º 123',
+    labelDistrict: 'Barrio',
+    placeholderDistrict: 'Barrio',
+    labelCityUf: 'Ciudad / Provincia',
+    placeholderCityUf: 'Ciudad - Provincia',
+    labelFee: 'Tarifa de Recepción / Adicional (€)',
+    labelMapsLink: 'Enlace de Ubicación (Google Maps URL)',
+    labelImageUrl: 'URL de la Imagen del Local (Fachada/Interior)',
+    placeholderImageUrl: 'https://imagenes.com/foto-estudio.jpg',
+    btnCancel: 'Cancelar',
+    btnUpdate: 'Actualizar Local',
+    btnSave: 'Guardar Punto de Atención',
+    loadingList: 'Buscando locales registrados...',
+    emptyTitle: 'Ningún estudio físico o punto de atención fijo registrado.',
+    emptySubtitle: 'Registre su primera dirección comercial para mostrarla en la agenda.',
+    badgeActive: 'Activo',
+    btnMaps: 'Ver en Maps',
+    feeLabel: 'Tarifa fija de recepción: €',
+    cepShort: 'CP',
+    alertRequired: 'Por favor, complete los campos obligatorios.',
+    alertCepNotFound: 'Código Postal no encontrado.',
+    alertCepError: 'Error al buscar información del Código Postal.',
+    alertUpdateSuccess: '¡Punto de atención actualizado con éxito!',
+    alertCreateSuccess: '¡Punto de atención registrado con éxito!',
+    alertUpdateError: 'No fue posible actualizar el local.',
+    alertCreateError: 'No fue posible guardar el local.',
+    alertToggleConfirm: '¿Desea realmente desactivar este punto de atención?',
+    alertToggleError: 'Error al cambiar el estado del local.'
+  }
+};
+
 export function LocationsManagement({ onBack }) {
+  const { systemLanguage } = useLanguage(); // 🌟 idioma atual, vem do Context global
+  const t = localTranslations[systemLanguage] || localTranslations['pt-BR'];
+
   const [locais, setLocais] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -51,7 +184,7 @@ export function LocationsManagement({ onBack }) {
     try {
       const response = await axios.get(`https://viacep.com.br/ws/${cepLimpo}/json/`);
       if (response.data.erro) {
-        alert("CEP não encontrado.");
+        alert(t.alertCepNotFound);
         return;
       }
       
@@ -64,7 +197,7 @@ export function LocationsManagement({ onBack }) {
       }));
     } catch (err) {
       console.error("Erro ao buscar CEP:", err);
-      alert("Erro ao buscar informações do CEP.");
+      alert(t.alertCepError);
     } finally {
       setCepLoading(false);
     }
@@ -100,7 +233,7 @@ export function LocationsManagement({ onBack }) {
   const handleSalvar = async (e) => {
     e.preventDefault();
     if (!formData.nomeLocal || !formData.cep || !formData.numero) {
-      alert("Por favor, preencha os campos obrigatórios.");
+      alert(t.alertRequired);
       return;
     }
 
@@ -130,29 +263,29 @@ export function LocationsManagement({ onBack }) {
     try {
       if (editingId) {
         await atualizarLocal(editingId, localDTO);
-        alert("Ponto de atendimento updated com sucesso!");
+        alert(t.alertUpdateSuccess);
       } else {
         await salvarLocal(localDTO);
-        alert("Ponto de atendimento cadastrado com sucesso!");
+        alert(t.alertCreateSuccess);
       }
       
       handleCancelarFormulario();
       carregarLocais();
     } catch (err) {
       console.error("Erro ao salvar local:", err);
-      alert(editingId ? "Não foi possível atualizar o local." : "Não foi possível salvar o local.");
+      alert(editingId ? t.alertUpdateError : t.alertCreateError);
     } finally {
       setSubmitLoading(false);
     }
   };
 
   const handleDesativar = async (id) => {
-    if (confirm("Deseja realmente desativar este local de atendimento?")) {
+    if (confirm(t.alertToggleConfirm)) {
       try {
         await alternarStatusLocal(id, false);
         carregarLocais();
       } catch (err) {
-        alert("Erro ao alterar status do local.");
+        alert(t.alertToggleError);
       }
     }
   };
@@ -197,8 +330,8 @@ export function LocationsManagement({ onBack }) {
             <ArrowLeft size={20} className="text-gray-600" />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-primary">Locais de Atendimento</h2>
-            <p className="text-xs text-gray-500">Gerencie seus estúdios físicos e pontos fixos</p>
+            <h2 className="text-xl font-bold text-primary">{t.title}</h2>
+            <p className="text-xs text-gray-500">{t.subtitle}</p>
           </div>
         </div>
         
@@ -207,7 +340,7 @@ export function LocationsManagement({ onBack }) {
             onClick={() => { setEditingId(null); setShowForm(true); }}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-primary/95 transition-all"
           >
-            <Plus size={16} /> Novo Estúdio
+            <Plus size={16} /> {t.btnNew}
           </button>
         )}
       </div>
@@ -216,16 +349,16 @@ export function LocationsManagement({ onBack }) {
         {showForm ? (
           <form onSubmit={handleSalvar} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
             <h3 className="text-lg font-bold text-gray-800 border-b pb-2">
-              {editingId ? "Editar Ponto Comercial" : "Cadastrar Novo Ponto Comercial"}
+              {editingId ? t.formTitleEdit : t.formTitleNew}
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Nome do Estabelecimento *</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelName}</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Studio Moema Premium"
+                  placeholder={t.placeholderName}
                   value={formData.nomeLocal}
                   onChange={e => setFormData({...formData, nomeLocal: e.target.value})}
                   className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
@@ -233,7 +366,7 @@ export function LocationsManagement({ onBack }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">CEP *</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelCep}</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -251,21 +384,21 @@ export function LocationsManagement({ onBack }) {
 
               <div className="md:col-span-2 grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Rua / Logradouro</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelStreet}</label>
                   <input
                     type="text"
-                    placeholder="Preenchido via CEP"
+                    placeholder={t.placeholderStreet}
                     value={formData.logradouro}
                     onChange={e => setFormData({...formData, logradouro: e.target.value})}
                     className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-gray-50 text-gray-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Número *</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelNumber}</label>
                   <input
                     type="text"
                     required
-                    placeholder="Nº 123"
+                    placeholder={t.placeholderNumber}
                     value={formData.numero}
                     onChange={e => setFormData({...formData, numero: e.target.value})}
                     className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
@@ -276,21 +409,21 @@ export function LocationsManagement({ onBack }) {
               {/* Layout dividido dinamicamente para Bairro e Cidade/Localidade */}
               <div className="grid grid-cols-2 gap-3 md:col-span-1">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Bairro</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelDistrict}</label>
                   <input
                     type="text"
-                    placeholder="Bairro"
+                    placeholder={t.placeholderDistrict}
                     value={formData.bairro}
                     onChange={e => setFormData({...formData, bairro: e.target.value})}
                     className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-gray-50 text-gray-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Cidade / UF</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelCityUf}</label>
                   <input
                     type="text"
                     readOnly
-                    placeholder="Cidade - UF"
+                    placeholder={t.placeholderCityUf}
                     value={formData.localidade ? `${formData.localidade} - ${formData.uf}` : ''}
                     className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none"
                   />
@@ -298,7 +431,7 @@ export function LocationsManagement({ onBack }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Taxa de Balcão / Adicional (R$)</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelFee}</label>
                 <input
                   type="number"
                   placeholder="0.00"
@@ -309,7 +442,7 @@ export function LocationsManagement({ onBack }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Link de Localização (Google Maps URL)</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelMapsLink}</label>
                 <input
                   type="url"
                   placeholder="https://maps.google.com/..."
@@ -320,11 +453,11 @@ export function LocationsManagement({ onBack }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-gray-700 mb-1">URL da Imagem do Local (Fachada/Interno)</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">{t.labelImageUrl}</label>
                 <div className="flex gap-2">
                   <input
                     type="url"
-                    placeholder="https://imagens.com/foto-estudio.jpg"
+                    placeholder={t.placeholderImageUrl}
                     value={formData.imageUrl}
                     onChange={e => setFormData({...formData, imageUrl: e.target.value})}
                     className="flex-1 px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
@@ -342,7 +475,7 @@ export function LocationsManagement({ onBack }) {
                 onClick={handleCancelarFormulario}
                 className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
               >
-                Cancelar
+                {t.btnCancel}
               </button>
               <button
                 type="submit"
@@ -350,20 +483,20 @@ export function LocationsManagement({ onBack }) {
                 className="flex-1 py-3 bg-accent text-white rounded-xl text-sm font-medium hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitLoading && <Loader2 size={16} className="animate-spin" />}
-                {editingId ? "Atualizar Local" : "Salvar Local de Atendimento"}
+                {editingId ? t.btnUpdate : t.btnSave}
               </button>
             </div>
           </form>
         ) : loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="animate-spin text-primary" size={32} />
-            <p className="text-sm text-gray-500">Buscando locais cadastrados...</p>
+            <p className="text-sm text-gray-500">{t.loadingList}</p>
           </div>
         ) : locais.length === 0 ? (
           <div className="bg-white border border-dashed rounded-2xl p-10 text-center text-gray-400">
             <MapPin size={40} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-sm font-medium">Nenhum estúdio físico ou ponto de atendimento fixo cadastrado.</p>
-            <p className="text-xs mt-1">Cadastre seu primeiro endereço comercial para exibição nas agendas.</p>
+            <p className="text-sm font-medium">{t.emptyTitle}</p>
+            <p className="text-xs mt-1">{t.emptySubtitle}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -382,7 +515,7 @@ export function LocationsManagement({ onBack }) {
                         onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=600'; }}
                       />
                       <span className="absolute top-3 right-3 bg-green-500 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
-                        <Check size={10} /> Ativo
+                        <Check size={10} /> {t.badgeActive}
                       </span>
                     </div>
 
@@ -392,9 +525,9 @@ export function LocationsManagement({ onBack }) {
                       <div className="space-y-1 text-xs text-gray-600">
                         <p className="font-medium text-gray-800">{end.logradouro}, Nº {end.numero}</p>
                         {/* Exibição formatada com Bairro, Cidade e Estado de maneira limpa */}
-                        <p>{end.bairro}{end.localidade ? ` — ${end.localidade} / ${end.uf}` : ''} — CEP: {end.cep}</p>
+                        <p>{end.bairro}{end.localidade ? ` — ${end.localidade} / ${end.uf}` : ''} — {t.cepShort}: {end.cep}</p>
                         {local.taxaAdicional > 0 && (
-                          <p className="text-primary font-semibold mt-1">Taxa fixa de balcão: R$ {local.taxaAdicional.toFixed(2)}</p>
+                          <p className="text-primary font-semibold mt-1">{t.feeLabel} {local.taxaAdicional.toFixed(2)}</p>
                         )}
                       </div>
                     </div>
@@ -409,14 +542,14 @@ export function LocationsManagement({ onBack }) {
                         className="flex-1 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm hover:bg-gray-50 transition-all"
                       >
                         <Globe size={14} className="text-blue-500" />
-                        Ver no Maps
+                        {t.btnMaps}
                       </a>
                     )}
                     
                     <button
                       onClick={() => handleIniciarEdicao(local)}
                       className="px-3 py-2 border border-gray-300 text-gray-600 bg-white rounded-xl hover:bg-gray-50 transition-colors"
-                      title="Editar Local"
+                      title={t.formTitleEdit}
                     >
                       <Edit2 size={15} />
                     </button>
@@ -424,7 +557,7 @@ export function LocationsManagement({ onBack }) {
                     <button
                       onClick={() => handleDesativar(local.idLocal)}
                       className="px-3 py-2 border border-red-200 text-red-600 bg-white rounded-xl hover:bg-red-50 transition-colors"
-                      title="Desativar Local"
+                      title={t.btnCancel}
                     >
                       <Trash2 size={15} />
                     </button>

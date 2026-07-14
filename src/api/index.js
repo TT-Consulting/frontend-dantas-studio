@@ -60,7 +60,7 @@ export {
   alternarStatusMaterial
 } from './inventory';
 
-// 6. CONFIGURAÇÕES (Locais e Horários Comerciais - Novo módulo extraído)
+// 6. CONFIGURAÇÕES (Locais e Horários Comerciais - Mapeamento com Backend)
 export {
   listarLocais,
   salvarLocal,
@@ -68,7 +68,14 @@ export {
   alternarStatusLocal,
   listarHorarioComercial,
   salvarHorarioComercial,
-  atualizarHorarioComercial
+  atualizarHorarioComercial,
+  obterConfiguracoes,
+  salvarConfiguracoes,
+  alternarTemaRapido,
+  mudarIdiomaSistema,
+  alternarPushRapido,
+  alternarEmailRapido,
+  exportarDadosBanco
 } from './settings';
 
 // 7. CONFIGURAÇÃO DO AXIOS

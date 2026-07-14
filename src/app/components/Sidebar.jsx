@@ -1,20 +1,24 @@
 import { House, Calendar, DollarSign, StickyNote, BarChart3, Settings, MapPin, Clock, Scissors, Package, UserX, LogOut } from 'lucide-react';
+// 🌟 Importa o hook do nosso contexto central de idiomas
+import { useLanguage } from '../../context/LanguageContext';
 
 export function Sidebar({ activeScreen, onNavigate, onSettingsClick, onLogout }) {
+  const { t } = useLanguage();
+
   const navItems = [
-    { id: 'home', icon: House, label: 'Home' },
-    { id: 'calendar', icon: Calendar, label: 'Agenda' },
-    { id: 'finance', icon: DollarSign, label: 'Finanças' },
-    { id: 'dashboard', icon: BarChart3, label: 'Relatórios' },
-    { id: 'notes', icon: StickyNote, label: 'Notas' },
+    { id: 'home', icon: House, label: t('navHome') },
+    { id: 'calendar', icon: Calendar, label: t('navCalendar') },
+    { id: 'finance', icon: DollarSign, label: t('navFinance') },
+    { id: 'dashboard', icon: BarChart3, label: t('navDashboard') },
+    { id: 'notes', icon: StickyNote, label: t('navNotes') },
   ];
 
   const managementItems = [
-    { id: 'locations', icon: MapPin, label: 'Local de Atendimento' },
-    { id: 'business-hours', icon: Clock, label: 'Horário Comercial' },
-    { id: 'services', icon: Scissors, label: 'Gestão de Serviços' },
-    { id: 'inventory', icon: Package, label: 'Estoque e Materiais' },
-    { id: 'inactive-clients', icon: UserX, label: 'Clientes Desativados' },
+    { id: 'locations', icon: MapPin, label: t('locations') || 'Local de Atendimento' },
+    { id: 'business-hours', icon: Clock, label: t('businessHours') || 'Horário Comercial' },
+    { id: 'services', icon: Scissors, label: t('services') || 'Gestão de Serviços' },
+    { id: 'inventory', icon: Package, label: t('inventory') || 'Estoque e Materiais' },
+    { id: 'inactive-clients', icon: UserX, label: t('inactiveClients') || 'Clientes Desativados' },
   ];
 
   return (
@@ -99,21 +103,21 @@ export function Sidebar({ activeScreen, onNavigate, onSettingsClick, onLogout })
           <button
             onClick={onSettingsClick}
             className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-purple-50 hover:text-primary transition-all"
-            title="Configurações"
+            title={t('navSettings') || 'Configurações'}
           >
             <Settings size={22} strokeWidth={2} className="flex-shrink-0" />
             <span className="font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-              Configurações
+              {t('navSettings') || 'Configurações'}
             </span>
           </button>
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all"
-            title="Sair"
+            title={t('logout') || 'Sair'}
           >
             <LogOut size={22} strokeWidth={2} className="flex-shrink-0" />
             <span className="font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-              Sair
+              {t('logout') || 'Sair'}
             </span>
           </button>
         </div>

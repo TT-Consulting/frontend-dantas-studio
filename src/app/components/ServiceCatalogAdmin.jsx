@@ -7,6 +7,8 @@ import {
   inativarServico,
   listarEstoque,
 } from '../../api';
+// 🌟 Importando o hook de idioma do seu contexto global
+import { useLanguage } from '../../context/LanguageContext';
 
 const mapFromApi = (s) => ({
   id: s?.idServico ?? s?.id ?? '',
@@ -52,6 +54,157 @@ const mapToApi = (s, availableMaterials = []) => {
   return payload;
 };
 
+// 🌍 Dicionário de Traduções Locais
+const localTranslations = {
+  'pt-BR': {
+    title: 'Catálogo de Serviços',
+    subtitle: 'Gerencie seus serviços e preços',
+    btnRefresh: 'Atualizar',
+    errorLoad: 'Não foi possível carregar os serviços.',
+    btnAddNew: 'Adicionar Novo Serviço',
+    loading: 'Carregando serviços...',
+    emptyState: 'Nenhum serviço encontrado.',
+    statusActive: 'Ativo',
+    statusInactive: 'Inativo',
+    alertLowStock: 'Estoque baixo',
+    lblMaterialsIncluded: 'Materiais Inclusos',
+    btnDeactivate: 'Desativar',
+    btnActivate: 'Ativar',
+    confirmInactivate: 'Deseja inativar este serviço?',
+    errorInactivate: 'Erro ao inativar serviço.',
+    errorSave: 'Erro ao salvar serviço. Verifique o backend.',
+    errorToggleStatus: 'Erro ao atualizar status.',
+    modalEdit: 'Editar Serviço',
+    modalCreate: 'Novo Serviço',
+    lblPhotoDrag: 'Foto do Serviço (Arraste ou cole aqui)',
+    photoHoverReplace: 'Arraste ou Cole uma nova foto para substituir',
+    photoUploadInstructions: 'Arraste ou cole uma imagem',
+    photoUploadClick: 'ou clique aqui para abrir os arquivos',
+    photoFormatAlert: 'Por favor, envie apenas arquivos de imagem.',
+    lblServiceName: 'Nome do Serviço',
+    lblCategory: 'Categoria',
+    selectCategoryPlaceholder: 'Selecione uma categoria...',
+    lblDescription: 'Descrição',
+    placeholderDescription: 'Descreva o serviço...',
+    lblPrice: 'Preço (R$)',
+    lblDuration: 'Duração (min)',
+    lblMaterialsRequired: 'Materiais Inclusos',
+    materialsSubText: 'Selecione apenas materiais ativos do estoque',
+    emptyMaterials: 'Nenhum material ativo disponível no estoque.',
+    lblActiveServiceCheckbox: 'Serviço ativo e visível para clientes',
+    btnCancel: 'Cancelar',
+    btnSave: 'Salvar',
+    lowStockIndicator: '(⚠️ baixo)',
+    materialsSelectedCount: '{count} material(is) selecionado(s)',
+    categories: {
+      "Cabelo": "Cabelo",
+      "Unhas": "Unhas",
+      "Maquilhagem": "Maquilhagem",
+      "Sobrancelhas e Cílios": "Sobrancelhas e Cílios",
+      "Estética Face": "Estética Face",
+      "Estética Corpo": "Estética Corpo"
+    }
+  },
+  'en-US': {
+    title: 'Service Catalog',
+    subtitle: 'Manage your services and pricing',
+    btnRefresh: 'Refresh',
+    errorLoad: 'Could not load services.',
+    btnAddNew: 'Add New Service',
+    loading: 'Loading services...',
+    emptyState: 'No services found.',
+    statusActive: 'Active',
+    statusInactive: 'Inactive',
+    alertLowStock: 'Low stock',
+    lblMaterialsIncluded: 'Included Materials',
+    btnDeactivate: 'Deactivate',
+    btnActivate: 'Activate',
+    confirmInactivate: 'Do you want to deactivate this service?',
+    errorInactivate: 'Error deactivating service.',
+    errorSave: 'Error saving service. Check backend.',
+    errorToggleStatus: 'Error updating status.',
+    modalEdit: 'Edit Service',
+    modalCreate: 'New Service',
+    lblPhotoDrag: 'Service Photo (Drag or paste here)',
+    photoHoverReplace: 'Drag or Paste a new photo to replace',
+    photoUploadInstructions: 'Drag or paste an image',
+    photoUploadClick: 'or click here to open files',
+    photoFormatAlert: 'Please upload image files only.',
+    lblServiceName: 'Service Name',
+    lblCategory: 'Category',
+    selectCategoryPlaceholder: 'Select a category...',
+    lblDescription: 'Description',
+    placeholderDescription: 'Describe the service...',
+    lblPrice: 'Price ($)',
+    lblDuration: 'Duration (min)',
+    lblMaterialsRequired: 'Included Materials',
+    materialsSubText: 'Select only active inventory materials',
+    emptyMaterials: 'No active materials available in stock.',
+    lblActiveServiceCheckbox: 'Active service and visible to clients',
+    btnCancel: 'Cancel',
+    btnSave: 'Save',
+    lowStockIndicator: '(⚠️ low)',
+    materialsSelectedCount: '{count} material(s) selected',
+    categories: {
+      "Cabelo": "Hair",
+      "Unhas": "Nails",
+      "Maquilhagem": "Makeup",
+      "Sobrancelhas e Cílios": "Brows & Lashes",
+      "Estética Face": "Facial Aesthetics",
+      "Estética Corpo": "Body Aesthetics"
+    }
+  },
+  'es-ES': {
+    title: 'Catálogo de Servicios',
+    subtitle: 'Gestione sus servicios y precios',
+    btnRefresh: 'Actualizar',
+    errorLoad: 'No se pudieron cargar los servicios.',
+    btnAddNew: 'Agregar Nuevo Servicio',
+    loading: 'Cargando servicios...',
+    emptyState: 'No se encontraron servicios.',
+    statusActive: 'Activo',
+    statusInactive: 'Inactivo',
+    alertLowStock: 'Stock bajo',
+    lblMaterialsIncluded: 'Materiales Incluidos',
+    btnDeactivate: 'Desactivar',
+    btnActivate: 'Activar',
+    confirmInactivate: '¿Desea desactivar este servicio?',
+    errorInactivate: 'Error al desactivar el servicio.',
+    errorSave: 'Error al guardar el servicio. Verifique el backend.',
+    errorToggleStatus: 'Error al actualizar el estado.',
+    modalEdit: 'Editar Servicio',
+    modalCreate: 'Nuevo Servicio',
+    lblPhotoDrag: 'Foto del Servicio (Arrastre o pegue aquí)',
+    photoHoverReplace: 'Arrastre o Pegue una nueva foto para reemplazar',
+    photoUploadInstructions: 'Arrastre o pegue una imagen',
+    photoUploadClick: 'o haga clic aquí para abrir los archivos',
+    photoFormatAlert: 'Por favor, suba solo archivos de imagen.',
+    lblServiceName: 'Nombre del Servicio',
+    lblCategory: 'Categoría',
+    selectCategoryPlaceholder: 'Seleccione una categoría...',
+    lblDescription: 'Descripción',
+    placeholderDescription: 'Describa el servicio...',
+    lblPrice: 'Precio (€)',
+    lblDuration: 'Duración (min)',
+    lblMaterialsRequired: 'Materiales Incluidos',
+    materialsSubText: 'Seleccione solo materiales activos del inventario',
+    emptyMaterials: 'No hay materiales activos disponibles en el inventario.',
+    lblActiveServiceCheckbox: 'Servicio activo y visible para los clientes',
+    btnCancel: 'Cancelar',
+    btnSave: 'Guardar',
+    lowStockIndicator: '(⚠️ bajo)',
+    materialsSelectedCount: '{count} material(es) seleccionado(s)',
+    categories: {
+      "Cabelo": "Cabello",
+      "Unhas": "Uñas",
+      "Maquilhagem": "Maquillaje",
+      "Sobrancelhas e Cílios": "Cejas y Pestañas",
+      "Estética Face": "Estética Facial",
+      "Estética Corpo": "Estética Corporal"
+    }
+  }
+};
+
 export function ServiceCatalogAdmin() {
   const [services, setServices] = useState([]);
   const [editingService, setEditingService] = useState(null);
@@ -62,6 +215,11 @@ export function ServiceCatalogAdmin() {
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
 
+  // 🌟 Capturando o idioma ativo do contexto
+  const { systemLanguage } = useLanguage();
+  const text = localTranslations[systemLanguage] || localTranslations['pt-BR'];
+
+  // Categorias que continuam servindo de ID de core na API, mas que serão exibidas traduzidas
   const categoriasDisponiveis = [
     "Cabelo",
     "Unhas",
@@ -71,7 +229,6 @@ export function ServiceCatalogAdmin() {
     "Estética Corpo"
   ];
 
-  // 🌟 ALTERAÇÃO: Carrega os materiais do estoque globalmente para uso na listagem e na edição
   const loadMaterials = async () => {
     try {
       setLoadingMaterials(true);
@@ -106,20 +263,18 @@ export function ServiceCatalogAdmin() {
       setServices(data.map(mapFromApi));
     } catch (err) {
       console.error('Erro ao carregar serviços', err);
-      setError('Não foi possível carregar os serviços.');
+      setError(text.errorLoad);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🌟 ALTERAÇÃO: Agora carrega ambos no início da tela
   useEffect(() => {
     loadServices();
     loadMaterials();
-  }, []);
+  }, [systemLanguage]); // Recarrega quando mudar idioma
 
   const handleEdit = (service) => {
-    // Garante que o array de materiais contenha apenas os IDs para o checkbox funcionar na modal
     const materialIds = (service.materials || []).map(m => typeof m === 'object' ? (m?.idMaterial ?? m?.id ?? m?.idEstoque) : m);
     setEditingService({ ...service, materials: materialIds });
     setShowModal(true);
@@ -142,18 +297,18 @@ export function ServiceCatalogAdmin() {
       setEditingService(null);
     } catch (err) {
       console.error('❌ Erro ao salvar serviço', err);
-      alert('Erro ao salvar serviço. Verifique o backend.');
+      alert(text.errorSave);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Deseja inativar este serviço?')) return;
+    if (!window.confirm(text.confirmInactivate)) return;
     try {
       await inativarServico(id);
       await loadServices();
     } catch (err) {
       console.error('Erro ao inativar serviço', err);
-      alert('Erro ao inativar serviço.');
+      alert(text.errorInactivate);
     }
   };
 
@@ -164,7 +319,7 @@ export function ServiceCatalogAdmin() {
       await loadServices();
     } catch (err) {
       console.error('❌ Erro ao atualizar status do serviço', err);
-      alert('Erro ao atualizar status.');
+      alert(text.errorToggleStatus);
     }
   };
 
@@ -195,7 +350,6 @@ export function ServiceCatalogAdmin() {
     setShowModal(true);
   };
 
-  // Helper para buscar o nome legível de um material a partir do ID ou do Objeto retornado
   const getMaterialName = (mat) => {
     if (typeof mat === 'object' && (mat?.nomeItem || mat?.nome)) {
       return mat.nomeItem ?? mat.nome;
@@ -208,7 +362,7 @@ export function ServiceCatalogAdmin() {
 
   const processFile = (file) => {
     if (!file || !file.type.startsWith('image/')) {
-      alert('Por favor, envie apenas arquivos de imagem.');
+      alert(text.photoFormatAlert);
       return;
     }
     const reader = new FileReader();
@@ -254,15 +408,15 @@ export function ServiceCatalogAdmin() {
     <div className="pb-24 px-5 pt-6">
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-primary">Catálogo de Serviços</h2>
-          <p className="text-gray-600 text-sm">Gerencie seus serviços e preços</p>
+          <h2 className="text-primary">{text.title}</h2>
+          <p className="text-gray-600 text-sm">{text.subtitle}</p>
         </div>
         <button
           onClick={() => { loadServices(); loadMaterials(); }}
           className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
         >
           <RefreshCw size={16} />
-          Atualizar
+          {text.btnRefresh}
         </button>
       </div>
 
@@ -278,13 +432,13 @@ export function ServiceCatalogAdmin() {
         className="w-full bg-accent text-white py-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Plus size={20} />
-        <span>Adicionar Novo Serviço</span>
+        <span>{text.btnAddNew}</span>
       </button>
 
       <div className="space-y-3">
-        {loading && <p className="text-gray-500 text-sm">Carregando serviços...</p>}
+        {loading && <p className="text-gray-500 text-sm">{text.loading}</p>}
         {!loading && services.length === 0 && (
-          <p className="text-gray-500 text-sm">Nenhum serviço encontrado.</p>
+          <p className="text-gray-500 text-sm">{text.emptyState}</p>
         )}
         {services.map((service) => {
           const lowStockAlert = hasLowStockMaterials(service);
@@ -310,7 +464,7 @@ export function ServiceCatalogAdmin() {
                     
                     {service.categoria && (
                       <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-primary font-medium">
-                        {service.categoria}
+                        {text.categories[service.categoria] || service.categoria}
                       </span>
                     )}
 
@@ -320,26 +474,25 @@ export function ServiceCatalogAdmin() {
                           : 'bg-gray-100 text-gray-600'
                         }`}
                     >
-                      {service.active ? 'Ativo' : 'Inativo'}
+                      {service.active ? text.statusActive : text.statusInactive}
                     </span>
                     {lowStockAlert && (
                       <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700 flex items-center gap-1">
                         <AlertCircle size={12} />
-                        Estoque baixo
+                        {text.alertLowStock}
                       </span>
                     )}
                   </div>
                   <p className="text-gray-600 text-sm mb-2">{service.description}</p>
                   <div className="flex items-center gap-4 text-sm">
-                    <p className="text-accent font-semibold">R$ {service.price}</p>
+                    <p className="text-accent font-semibold">{systemLanguage === 'pt-BR' ? 'R$' : systemLanguage === 'es-ES' ? '€' : '$'} {service.price}</p>
                     <p className="text-gray-500">{service.duration} min</p>
                   </div>
                   
-                  {/* 🌟 CORREÇÃO AQUI: Traduzindo IDs de materiais para Nomes reais na listagem */}
                   {service.materials && service.materials.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
-                        Materiais Inclusos
+                        {text.lblMaterialsIncluded}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {service.materials.map((material, idx) => (
@@ -364,7 +517,7 @@ export function ServiceCatalogAdmin() {
                       : 'bg-green-100 text-green-700 hover:bg-green-200'
                     }`}
                 >
-                  {service.active ? 'Desativar' : 'Ativar'}
+                  {service.active ? text.btnDeactivate : text.btnActivate}
                 </button>
                 <button
                   onClick={() => handleEdit(service)}
@@ -389,7 +542,7 @@ export function ServiceCatalogAdmin() {
           <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-primary">
-                {editingService.id ? 'Editar Serviço' : 'Novo Serviço'}
+                {editingService.id ? text.modalEdit : text.modalCreate}
               </h3>
               <button
                 onClick={() => {
@@ -404,7 +557,7 @@ export function ServiceCatalogAdmin() {
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">Foto do Serviço (Arraste ou cole aqui)</label>
+                <label className="text-sm text-gray-600 mb-2 block">{text.lblPhotoDrag}</label>
                 <div
                   onDragEnter={handleDrag}
                   onDragOver={handleDrag}
@@ -420,14 +573,14 @@ export function ServiceCatalogAdmin() {
                     <>
                       <img src={editingService.fotoUrl} alt="Preview" className="w-full h-full object-cover absolute inset-0" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium backdrop-blur-[2px]">
-                        Arraste ou Cole uma nova foto para substituir
+                        {text.photoHoverReplace}
                       </div>
                     </>
                   ) : (
                     <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
                       <Upload size={24} className="text-gray-400 mb-1" />
-                      <p className="text-xs font-semibold text-gray-700">Arraste ou cole uma imagem</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">ou clique aqui para abrir os arquivos</p>
+                      <p className="text-xs font-semibold text-gray-700">{text.photoUploadInstructions}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{text.photoUploadClick}</p>
                       <input
                         type="file"
                         accept="image/*"
@@ -440,7 +593,7 @@ export function ServiceCatalogAdmin() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">Service Name</label>
+                <label className="text-sm text-gray-600 mb-2 block">{text.lblServiceName}</label>
                 <input
                   type="text"
                   value={editingService.name}
@@ -453,7 +606,7 @@ export function ServiceCatalogAdmin() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">Categoria</label>
+                <label className="text-sm text-gray-600 mb-2 block">{text.lblCategory}</label>
                 <select
                   value={editingService.categoria}
                   onChange={(e) =>
@@ -461,23 +614,23 @@ export function ServiceCatalogAdmin() {
                   }
                   className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer text-sm"
                 >
-                  <option value="">Selecione uma categoria...</option>
+                  <option value="">{text.selectCategoryPlaceholder}</option>
                   {categoriasDisponiveis.map((cat) => (
                     <option key={cat} value={cat}>
-                      {cat}
+                      {text.categories[cat] || cat}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">Descrição</label>
+                <label className="text-sm text-gray-600 mb-2 block">{text.lblDescription}</label>
                 <textarea
                   value={editingService.description}
                   onChange={(e) =>
                     setEditingService({ ...editingService, description: e.target.value })
                   }
-                  placeholder="Descreva o serviço..."
+                  placeholder={text.placeholderDescription}
                   rows={3}
                   className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
@@ -485,7 +638,7 @@ export function ServiceCatalogAdmin() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-gray-600 mb-2 block">Preço (R$)</label>
+                  <label className="text-sm text-gray-600 mb-2 block">{text.lblPrice}</label>
                   <input
                     type="number"
                     value={editingService.price}
@@ -497,7 +650,7 @@ export function ServiceCatalogAdmin() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600 mb-2 block">Duração (min)</label>
+                  <label className="text-sm text-gray-600 mb-2 block">{text.lblDuration}</label>
                   <input
                     type="number"
                     value={editingService.duration}
@@ -511,11 +664,11 @@ export function ServiceCatalogAdmin() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">Materiais Inclusos</label>
-                <p className="text-xs text-gray-500 mb-2">Selecione apenas materiais ativos do estoque</p>
+                <label className="text-sm text-gray-600 mb-2 block">{text.lblMaterialsRequired}</label>
+                <p className="text-xs text-gray-500 mb-2">{text.materialsSubText}</p>
                 <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
                   {availableMaterials.length === 0 ? (
-                    <p className="text-sm text-gray-500">Nenhum material ativo disponível no estoque.</p>
+                    <p className="text-sm text-gray-500">{text.emptyMaterials}</p>
                   ) : (
                     availableMaterials.map((material) => {
                       const matId = material?.idMaterial ?? material?.id ?? material?.idEstoque ?? material?.nomeItem;
@@ -553,7 +706,7 @@ export function ServiceCatalogAdmin() {
                                 ? 'text-red-600 font-semibold'
                                 : 'text-gray-500'
                               }`}>
-                              Qtd: {matQuantidade} {matQuantidade <= matMinima ? '(⚠️ baixo)' : ''}
+                              Qtd: {matQuantidade} {matQuantidade <= matMinima ? text.lowStockIndicator : ''}
                             </span>
                           </div>
                         </label>
@@ -563,7 +716,7 @@ export function ServiceCatalogAdmin() {
                 </div>
                 {availableMaterials.length > 0 && editingService.materials?.length > 0 && (
                   <p className="text-xs text-gray-600 mt-2">
-                    {editingService.materials.length} material(is) selecionado(s)
+                    {text.materialsSelectedCount.replace('{count}', editingService.materials.length)}
                   </p>
                 )}
               </div>
@@ -579,7 +732,7 @@ export function ServiceCatalogAdmin() {
                   className="w-5 h-5 accent-primary cursor-pointer"
                 />
                 <label htmlFor="active" className="text-gray-700 cursor-pointer">
-                  Serviço ativo e visível para clientes
+                  {text.lblActiveServiceCheckbox}
                 </label>
               </div>
             </div>
@@ -592,14 +745,14 @@ export function ServiceCatalogAdmin() {
                 }}
                 className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
               >
-                Cancelar
+                {text.btnCancel}
               </button>
               <button
                 onClick={handleSave}
                 className="flex-1 py-3 bg-accent text-white rounded-xl hover:shadow-lg transition-shadow flex items-center justify-center gap-2"
               >
                 <Save size={18} />
-                <span>Salvar</span>
+                <span>{text.btnSave}</span>
               </button>
             </div>
           </div>

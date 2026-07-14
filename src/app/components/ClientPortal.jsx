@@ -388,6 +388,19 @@ export function ClientPortal({ onBack, initialClientData }) {
 
   const formatDate = (dateIsoStr) => {
     if (!dateIsoStr) return '';
+
+    // Se receber apenas a data YYYY-MM-DD ou contiver o T, extraímos apenas a parte do dia
+    const dataPura = dateIsoStr.split('T')[0];
+    const partes = dataPura.split('-'); // [ano, mes, dia]
+
+    if (partes.length === 3) {
+      // Cria o objeto Date usando inteiros (o mês no JS começa em 0, por isso o -1)
+      // Isso força o JavaScript a usar o fuso horário LOCAL do navegador
+      const date = new Date(partes[0], partes[1] - 1, partes[2]);
+      return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    }
+
+    // Fallback caso a string venha em outro formato inesperado
     const date = new Date(dateIsoStr);
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   };
@@ -515,7 +528,7 @@ export function ClientPortal({ onBack, initialClientData }) {
         try {
           const parsed = JSON.parse(limpo);
           return formatarEndereco(parsed); // Reavalia como objeto
-        } catch (e) {
+        } catch {
           // Se falhar o parse, deixa seguir para o retorno de string comum
         }
       }

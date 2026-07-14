@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Package, Plus, Edit2, Trash2, AlertTriangle, Check, X, TrendingDown, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Package, Plus, Edit2, Trash2, AlertTriangle, Check, X, RefreshCw } from 'lucide-react';
+import { useLanguage } from "../../../context/LanguageContext"; 
 import {
   listarEstoque,
   salvarMaterial,
@@ -7,34 +8,141 @@ import {
   alternarStatusMaterial,
 } from '../../../api';
 
+const localTranslations = {
+  'pt-BR': {
+    title: 'Estoque e Materiais',
+    subtitle: 'Controle seus produtos e materiais do MariaDB',
+    btnBack: 'Voltar',
+    btnRefresh: 'Atualizar',
+    loading: 'Conectando ao MariaDB...',
+    errorLoad: 'Falha ao carregar estoque do banco de dados.',
+    errorSave: 'Erro ao salvar material. Tente novamente.',
+    errorRemove: 'Erro ao remover material.',
+    errorUpdateQty: 'Erro ao atualizar quantidade.',
+    lowStockSingle: 'item com estoque baixo',
+    lowStockPlural: 'itens com estoque baixo',
+    lowStockWarning: 'Reabasteça para evitar ficar sem produtos importantes',
+    emptyState: 'Nenhum material encontrado no estoque.',
+    confirmDelete: 'Tem certeza que deseja desativar este item?',
+    lblQty: 'Quantidade',
+    lblMin: 'Mín',
+    statusEsgotado: 'Esgotado',
+    statusBaixo: 'Estoque Baixo',
+    statusAtencao: 'Atenção',
+    statusOk: 'OK',
+    modalNewTitle: 'Adicionar Item',
+    modalEditTitle: 'Editar Item',
+    formName: 'Nome do Item',
+    formCategory: 'Categoria',
+    formCurrent: 'Quantidade Atual',
+    formMin: 'Quantidade Mínima',
+    formUnit: 'Unidade',
+    placeholderName: 'Ex: Esmalte Vermelho',
+    selectOption: 'Selecione...',
+    btnCancel: 'Cancelar',
+    btnSave: 'Salvar'
+  },
+  'en-US': {
+    title: 'Inventory & Materials',
+    subtitle: 'Control your products and materials from MariaDB',
+    btnBack: 'Back',
+    btnRefresh: 'Refresh',
+    loading: 'Connecting to MariaDB...',
+    errorLoad: 'Failed to load inventory from database.',
+    errorSave: 'Error saving material. Please try again.',
+    errorRemove: 'Error removing material.',
+    errorUpdateQty: 'Error updating quantity.',
+    lowStockSingle: 'item with low stock',
+    lowStockPlural: 'items with low stock',
+    lowStockWarning: 'Replenish to avoid running out of important products',
+    emptyState: 'No materials found in inventory.',
+    confirmDelete: 'Are you sure you want to deactivate this item?',
+    lblQty: 'Quantity',
+    lblMin: 'Min',
+    statusEsgotado: 'Out of Stock',
+    statusBaixo: 'Low Stock',
+    statusAtencao: 'Warning',
+    statusOk: 'OK',
+    modalNewTitle: 'Add Item',
+    modalEditTitle: 'Edit Item',
+    formName: 'Item Name',
+    formCategory: 'Category',
+    formCurrent: 'Current Quantity',
+    formMin: 'Minimum Quantity',
+    formUnit: 'Unit',
+    placeholderName: 'e.g., Red Nail Polish',
+    selectOption: 'Select...',
+    btnCancel: 'Cancel',
+    btnSave: 'Save'
+  },
+  'es-ES': {
+    title: 'Inventario y Materiales',
+    subtitle: 'Controle sus productos y materiales de MariaDB',
+    btnBack: 'Volver',
+    btnRefresh: 'Actualizar',
+    loading: 'Conectando a MariaDB...',
+    errorLoad: 'Error al cargar el inventario de la base de datos.',
+    errorSave: 'Error al guardar el material. Intente nuevamente.',
+    errorRemove: 'Error al eliminar el material.',
+    errorUpdateQty: 'Error al actualizar la cantidad.',
+    lowStockSingle: 'artículo con stock bajo',
+    lowStockPlural: 'artículos con stock bajo',
+    lowStockWarning: 'Reabastezca para evitar quedarse sin productos importantes',
+    emptyState: 'No se encontraron materiales en el inventario.',
+    confirmDelete: '¿Está seguro de que desea desactivar este artículo?',
+    lblQty: 'Cantidad',
+    lblMin: 'Mín',
+    statusEsgotado: 'Agotado',
+    statusBaixo: 'Stock Bajo',
+    statusAtencao: 'Atención',
+    statusOk: 'OK',
+    modalNewTitle: 'Añadir Artículo',
+    modalEditTitle: 'Editar Artículo',
+    formName: 'Nombre del Artículo',
+    formCategory: 'Categoría',
+    formCurrent: 'Cantidad Actual',
+    formMin: 'Cantidad Mínima',
+    formUnit: 'Unidad',
+    placeholderName: 'Ej: Esmalte Rojo',
+    selectOption: 'Seleccione...',
+    btnCancel: 'Cancelar',
+    btnSave: 'Guardar'
+  }
+};
+
 export function InventoryManagement({ onBack }) {
+  const { systemLanguage } = useLanguage();
+  const text = localTranslations[systemLanguage] || localTranslations['pt-BR'];
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  
   const [formData, setFormData] = useState({
     nomeItem: '',
     categoria: '',
     quantidadeAtual: 0,
-    quantidadeMinima: 0,
+    quantidadeMinimaAlerta: 0, // 🌟 Sincronizado com EstoqueMaterialDTO
     unidadeMedida: 'unid',
+    isAtivo: true
   });
 
   const categories = ['Esmaltes', 'Géis', 'Lixas', 'Bases', 'Finalizadores', 'Removedores', 'Materiais', 'Outros'];
   const units = ['unid', 'litros', 'ml', 'gramas', 'kg'];
 
-  // Carregar dados do banco
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await listarEstoque();
-      console.log('✅ Estoque carregado:', data);
-      setItems(data);
+      // Filtrando para exibir apenas os ativos na listagem principal do front
+      const ativos = data.filter(item => item.isAtivo !== false);
+      setItems(ativos);
     } catch (err) {
       console.error('❌ Erro ao carregar estoque:', err);
-      setError('Falha ao carregar estoque do banco de dados.');
+      setError(text.errorLoad);
     } finally {
       setLoading(false);
     }
@@ -42,36 +150,42 @@ export function InventoryManagement({ onBack }) {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [systemLanguage]);
 
-  const lowStockItems = items.filter((item) => item.quantidadeAtual <= item.quantidadeMinima);
+  const lowStockItems = items.filter((item) => item.quantidadeAtual <= item.quantidadeMinimaAlerta);
 
   const handleSave = async () => {
     if (!formData.nomeItem || !formData.categoria) return;
 
     try {
       if (editingItem) {
-        // Atualizar item existente
-        console.log(`🔄 Atualizando material ${editingItem.idMaterial}`);
-        await ajustarQuantidade(editingItem.idMaterial, formData.quantidadeAtual);
+        // Como o endpoint /ajustar do backend faz SUM (atual = atual + param),
+        // calculamos a diferença para ajustar o valor exato desejado pelo form.
+        const diferenca = formData.quantidadeAtual - editingItem.quantidadeAtual;
+        
+        // Se mudou a quantidade, ajusta. Se mudou outros campos, recria/salva por POST
+        if (diferenca !== 0) {
+          await ajustarQuantidade(editingItem.idMaterial, diferenca);
+        }
+        
+        // Envia o objeto atualizado completo para salvar alterações de nome/categoria/mínimo
+        await salvarMaterial({
+          ...editingItem,
+          nomeItem: formData.nomeItem,
+          categoria: formData.categoria,
+          quantidadeMinimaAlerta: formData.quantidadeMinimaAlerta,
+          unidadeMedida: formData.unidadeMedida
+        });
       } else {
         // Criar novo material
-        console.log('✨ Criando novo material');
         await salvarMaterial(formData);
       }
-      await loadData(); // Recarrega a lista
+      await loadData();
       setShowAddModal(false);
       setEditingItem(null);
-      setFormData({
-        nomeItem: '',
-        categoria: '',
-        quantidadeAtual: 0,
-        quantidadeMinima: 0,
-        unidadeMedida: 'unid',
-      });
     } catch (err) {
       console.error('❌ Erro ao salvar material:', err);
-      setError('Erro ao salvar material. Tente novamente.');
+      setError(text.errorSave);
     }
   };
 
@@ -79,50 +193,50 @@ export function InventoryManagement({ onBack }) {
     setEditingItem(item);
     setFormData({
       nomeItem: item.nomeItem,
-      categoria: item.categoria,
+      categoria: item.categoria || '',
       quantidadeAtual: item.quantidadeAtual,
-      quantidadeMinima: item.quantidadeMinima,
-      unidadeMedida: item.unidadeMedida,
+      quantidadeMinimaAlerta: item.quantidadeMinimaAlerta || 0,
+      unidadeMedida: item.unidadeMedida || 'unid',
+      isAtivo: item.isAtivo
     });
     setShowAddModal(true);
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Tem certeza que deseja remover este item?')) {
+    if (confirm(text.confirmDelete)) {
       try {
-        console.log(`❌ Removendo material ${id}`);
-        await alternarStatusMaterial(id, false); // Desativar em vez de deletar
+        await alternarStatusMaterial(id, false); // Passa false para acionar /desativar
         await loadData();
       } catch (err) {
         console.error('Erro ao remover material:', err);
-        setError('Erro ao remover material.');
+        setError(text.errorRemove);
       }
     }
   };
 
   const updateQuantity = async (id, change) => {
     try {
-      const item = items.find((i) => i.idMaterial === id);
-      const novaQuantidade = Math.max(0, item.quantidadeAtual + change);
-      console.log(`📦 Ajustando quantidade do material ${id} para ${novaQuantidade}`);
-      await ajustarQuantidade(id, novaQuantidade);
+      // Como o endpoint `/ajustar` soma a quantidade enviada ao estoque atual,
+      // podemos passar diretamente o `change` (1 ou -1)
+      await ajustarQuantidade(id, change);
       await loadData();
     } catch (err) {
       console.error('Erro ao atualizar quantidade:', err);
-      setError('Erro ao atualizar quantidade.');
+      setError(text.errorUpdateQty);
     }
   };
 
   const getStockStatus = (item) => {
-    const percentage = (item.quantidadeAtual / item.quantidadeMinima) * 100;
+    const min = item.quantidadeMinimaAlerta || 1;
+    const percentage = (item.quantidadeAtual / min) * 100;
     if (item.quantidadeAtual === 0) {
-      return { color: 'bg-red-500', label: 'Esgotado', textColor: 'text-red-700' };
-    } else if (item.quantidadeAtual < item.quantidadeMinima) {
-      return { color: 'bg-red-400', label: 'Estoque Baixo', textColor: 'text-red-700' };
+      return { color: 'bg-red-500', label: text.statusEsgotado, textColor: 'text-red-700' };
+    } else if (item.quantidadeAtual <= item.quantidadeMinimaAlerta) {
+      return { color: 'bg-red-400', label: text.statusBaixo, textColor: 'text-red-700' };
     } else if (percentage <= 150) {
-      return { color: 'bg-yellow-400', label: 'Atenção', textColor: 'text-yellow-700' };
+      return { color: 'bg-yellow-400', label: text.statusAtencao, textColor: 'text-yellow-700' };
     } else {
-      return { color: 'bg-green-400', label: 'OK', textColor: 'text-green-700' };
+      return { color: 'bg-green-400', label: text.statusOk, textColor: 'text-green-700' };
     }
   };
 
@@ -136,7 +250,7 @@ export function InventoryManagement({ onBack }) {
             className="flex items-center gap-2 text-primary hover:text-accent transition-colors"
           >
             <ArrowLeft size={20} />
-            <span>Voltar</span>
+            <span>{text.btnBack}</span>
           </button>
           <button
             onClick={loadData}
@@ -144,11 +258,11 @@ export function InventoryManagement({ onBack }) {
             className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
           >
             <RefreshCw size={16} />
-            Atualizar
+            {text.btnRefresh}
           </button>
         </div>
-        <h2 className="text-primary text-2xl">Estoque e Materiais</h2>
-        <p className="text-gray-600 text-sm mt-1">Controle seus produtos e materiais do MariaDB</p>
+        <h2 className="text-primary text-2xl">{text.title}</h2>
+        <p className="text-gray-600 text-sm mt-1">{text.subtitle}</p>
       </div>
 
       {/* Error Alert */}
@@ -163,7 +277,7 @@ export function InventoryManagement({ onBack }) {
       {/* Loading State */}
       {loading && (
         <div className="px-5 pt-6">
-          <p className="text-gray-500 text-center">Conectando ao MariaDB...</p>
+          <p className="text-gray-500 text-center">{text.loading}</p>
         </div>
       )}
 
@@ -175,10 +289,10 @@ export function InventoryManagement({ onBack }) {
               <AlertTriangle className="text-red-600 shrink-0 mt-0.5" size={20} />
               <div>
                 <p className="text-red-700 font-medium mb-1">
-                  ⚠️ {lowStockItems.length} {lowStockItems.length === 1 ? 'item com estoque baixo' : 'itens com estoque baixo'}
+                  ⚠️ {lowStockItems.length} {lowStockItems.length === 1 ? text.lowStockSingle : text.lowStockPlural}
                 </p>
                 <p className="text-red-600 text-sm">
-                  Reabasteça para evitar ficar sem produtos importantes
+                  {text.lowStockWarning}
                 </p>
               </div>
             </div>
@@ -189,7 +303,7 @@ export function InventoryManagement({ onBack }) {
       {/* Empty State */}
       {!loading && items.length === 0 && (
         <div className="px-5 pt-6">
-          <p className="text-gray-500 text-center">Nenhum material encontrado no estoque.</p>
+          <p className="text-gray-500 text-center">{text.emptyState}</p>
         </div>
       )}
 
@@ -198,16 +312,16 @@ export function InventoryManagement({ onBack }) {
         {!loading &&
           items
             .sort((a, b) => {
-              // Sort by low stock first
-              const aLow = a.quantidadeAtual <= a.quantidadeMinima;
-              const bLow = b.quantidadeAtual <= b.quantidadeMinima;
+              const aLow = a.quantidadeAtual <= a.quantidadeMinimaAlerta;
+              const bLow = b.quantidadeAtual <= b.quantidadeMinimaAlerta;
               if (aLow && !bLow) return -1;
               if (!aLow && bLow) return 1;
               return 0;
             })
             .map((item) => {
               const status = getStockStatus(item);
-              const stockPercentage = Math.min(100, (item.quantidadeAtual / (item.quantidadeMinima * 2)) * 100);
+              const min = item.quantidadeMinimaAlerta || 1;
+              const stockPercentage = Math.min(100, (item.quantidadeAtual / (min * 2)) * 100);
 
             return (
               <div key={item.idMaterial} className="bg-white rounded-xl p-5 shadow-md">
@@ -220,7 +334,7 @@ export function InventoryManagement({ onBack }) {
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
                       item.quantidadeAtual === 0
                         ? 'bg-red-100 text-red-700'
-                        : item.quantidadeAtual <= item.quantidadeMinima
+                        : item.quantidadeAtual <= item.quantidadeMinimaAlerta
                         ? 'bg-red-100 text-red-700'
                         : 'bg-green-100 text-green-700'
                     }`}
@@ -233,10 +347,10 @@ export function InventoryManagement({ onBack }) {
                 <div className="mb-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600">
-                      Quantidade: <span className="font-semibold text-gray-800">{item.quantidadeAtual} {item.unidadeMedida}</span>
+                      {text.lblQty}: <span className="font-semibold text-gray-800">{item.quantidadeAtual} {item.unidadeMedida}</span>
                     </span>
                     <span className="text-gray-500 text-xs">
-                      Mín: {item.quantidadeMinima} {item.unidadeMedida}
+                      {text.lblMin}: {item.quantidadeMinimaAlerta} {item.unidadeMedida}
                     </span>
                   </div>
                   <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -289,8 +403,9 @@ export function InventoryManagement({ onBack }) {
             nomeItem: '',
             categoria: '',
             quantidadeAtual: 0,
-            quantidadeMinima: 0,
+            quantidadeMinimaAlerta: 0,
             unidadeMedida: 'unid',
+            isAtivo: true
           });
           setShowAddModal(true);
         }}
@@ -305,7 +420,7 @@ export function InventoryManagement({ onBack }) {
           <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-primary text-xl">
-                {editingItem ? 'Editar Item' : 'Adicionar Item'}
+                {editingItem ? text.modalEditTitle : text.modalNewTitle}
               </h3>
               <button
                 onClick={() => {
@@ -320,24 +435,24 @@ export function InventoryManagement({ onBack }) {
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">Nome do Item</label>
+                <label className="text-sm text-gray-600 mb-2 block">{text.formName}</label>
                 <input
                   type="text"
                   value={formData.nomeItem}
                   onChange={(e) => setFormData({ ...formData, nomeItem: e.target.value })}
-                  placeholder="Ex: Esmalte Vermelho"
+                  placeholder={text.placeholderName}
                   className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">Categoria</label>
+                <label className="text-sm text-gray-600 mb-2 block">{text.formCategory}</label>
                 <select
                   value={formData.categoria}
                   onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                   className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="">Selecione...</option>
+                  <option value="">{text.selectOption}</option>
                   {categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
@@ -346,7 +461,7 @@ export function InventoryManagement({ onBack }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-gray-600 mb-2 block">Quantidade Atual</label>
+                  <label className="text-sm text-gray-600 mb-2 block">{text.formCurrent}</label>
                   <input
                     type="number"
                     value={formData.quantidadeAtual}
@@ -356,11 +471,11 @@ export function InventoryManagement({ onBack }) {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600 mb-2 block">Quantidade Mínima</label>
+                  <label className="text-sm text-gray-600 mb-2 block">{text.formMin}</label>
                   <input
                     type="number"
-                    value={formData.quantidadeMinima}
-                    onChange={(e) => setFormData({ ...formData, quantidadeMinima: Number(e.target.value) })}
+                    value={formData.quantidadeMinimaAlerta}
+                    onChange={(e) => setFormData({ ...formData, quantidadeMinimaAlerta: Number(e.target.value) })}
                     min="0"
                     className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                   />
@@ -368,7 +483,7 @@ export function InventoryManagement({ onBack }) {
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-2 block">Unidade</label>
+                <label className="text-sm text-gray-600 mb-2 block">{text.formUnit}</label>
                 <select
                   value={formData.unidadeMedida}
                   onChange={(e) => setFormData({ ...formData, unidadeMedida: e.target.value })}
@@ -389,7 +504,7 @@ export function InventoryManagement({ onBack }) {
                 }}
                 className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
               >
-                Cancelar
+                {text.btnCancel}
               </button>
               <button
                 onClick={handleSave}
@@ -397,7 +512,7 @@ export function InventoryManagement({ onBack }) {
                 className="flex-1 py-3 bg-accent text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Check size={20} />
-                <span>Salvar</span>
+                <span>{text.btnSave}</span>
               </button>
             </div>
           </div>

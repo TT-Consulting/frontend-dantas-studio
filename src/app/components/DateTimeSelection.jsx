@@ -1,5 +1,5 @@
 // Adicione o 'useMemo' dentro das chaves do 'react'
-import { useState, useEffect, useMemo } from 'react'; 
+import { useState, useEffect, useMemo } from 'react';
 import { Calendar as CalendarIcon, Clock, Loader, CalendarX } from 'lucide-react';
 import { buscarDisponibilidade } from '../../api';
 
@@ -50,11 +50,17 @@ export function DateTimeSelection({ selectedServices, selectedDate, setSelectedD
 
       {/* Input de Data ou Calendário */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-        <input 
-          type="date" 
+        <input
+          type="date"
           className="w-full p-3 border border-gray-200 rounded-xl focus:outline-primary"
           onChange={(e) => {
-            setSelectedDate(new Date(e.target.value));
+            const valorInput = e.target.value; // Ex: "2026-07-15"
+            if (valorInput) {
+              // Adicionar 'T00:00' força a criação da data no fuso horário local da máquina
+              setSelectedDate(new Date(`${valorInput}T00:00`));
+            } else {
+              setSelectedDate(null);
+            }
             setSelectedTime(''); // Limpa o horário se mudar a data
           }}
         />
@@ -84,13 +90,12 @@ export function DateTimeSelection({ selectedServices, selectedDate, setSelectedD
                   key={slot.hora}
                   disabled={!slot.disponivel}
                   onClick={() => setSelectedTime(slot.hora)}
-                  className={`p-3 text-center rounded-xl font-medium text-sm transition-all border ${
-                    selectedTime === slot.hora
+                  className={`p-3 text-center rounded-xl font-medium text-sm transition-all border ${selectedTime === slot.hora
                       ? 'bg-primary text-white border-primary'
-                      : slot.disponivel 
+                      : slot.disponivel
                         ? 'bg-purple-50 text-primary border-purple-100 hover:bg-purple-100'
                         : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   {slot.hora}
                 </button>

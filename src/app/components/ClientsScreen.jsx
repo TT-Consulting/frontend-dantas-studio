@@ -1,8 +1,175 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, User, Phone, Mail, Calendar, X, AlertCircle, Sparkles, Plus, Edit, UserX, Edit2, MapPin } from 'lucide-react';
 import { listarClientes, salvarCliente, atualizarCliente, alternarStatusCliente } from '../../api';
+import { useLanguage } from '../../context/LanguageContext'; // 🌟 Importando o hook de idioma
+
+// Dicionário local para itens muito específicos da tela de clientes
+const localTranslations = {
+  'pt-BR': {
+    title: 'Gestão de Clientes',
+    subtitle: 'Visualize e gerencie os perfis e históricos',
+    searchPlaceholder: 'Buscar cliente pelo nome...',
+    statTotal: 'Total',
+    statMonth: 'Este Mês',
+    statVips: 'VIPs',
+    loading: 'Carregando clientes...',
+    empty: 'Nenhum cliente encontrado.',
+    noPhone: 'Sem telefone',
+    noLoc: 'Sem localidade',
+    active: 'Ativo',
+    inactive: 'Inativo',
+    visit: 'visita',
+    visits: 'visitas',
+    profileTitle: 'Perfil do Cliente',
+    profileSub: 'atendimentos realizados',
+    basicData: 'Dados Básicos',
+    gender: 'Gênero',
+    genderNot: 'Não informado',
+    age: 'Idade',
+    years: 'anos',
+    contact: 'Contato',
+    address: 'Endereço',
+    health: 'Saúde',
+    allergies: 'Alergias',
+    healthRestrictions: 'Restrições de Saúde',
+    observations: 'Observações',
+    tagIngrown: 'Unhas encravadas',
+    tagSensitive: 'Sensibilidade excessiva',
+    tagFungus: 'Micose/fungos',
+    close: 'Fechar',
+    editClient: 'Editar Cliente',
+    newClient: 'Novo Cliente',
+    fillBelow: 'Preencha os dados abaixo',
+    labelName: 'Nome',
+    labelNamePlc: 'Nome completo',
+    labelEmail: 'Email',
+    labelLocPlc: 'Cidade, Bairro',
+    labelAddress: 'Endereço',
+    labelAddressPlc: 'Rua, Número',
+    labelBirth: 'Data de Nascimento',
+    labelSelect: 'Selecione',
+    labelAllergiesPlc: 'Descreva alergias, se houver',
+    labelHealthPlc: 'Descreva condições de saúde relevantes',
+    labelHealthTags: 'Observações de Saúde',
+    checkIngrown: 'Tendência a unhas encravadas',
+    checkSensitive: 'Sensibilidade cutânea excessiva',
+    checkFungus: 'Histórico ou presença de micose/fungos',
+    cancel: 'Cancelar',
+    saveBtn: 'Salvar Alterações',
+    addBtn: 'Adicionar Cliente'
+  },
+  'en-US': {
+    title: 'Client Management',
+    subtitle: 'View and manage client profiles and histories',
+    searchPlaceholder: 'Search client by name...',
+    statTotal: 'Total',
+    statMonth: 'This Month',
+    statVips: 'VIPs',
+    loading: 'Loading clients...',
+    empty: 'No clients found.',
+    noPhone: 'No phone',
+    noLoc: 'No location',
+    active: 'Active',
+    inactive: 'Inactive',
+    visit: 'visit',
+    visits: 'visits',
+    profileTitle: 'Client Profile',
+    profileSub: 'appointments completed',
+    basicData: 'Basic Data',
+    gender: 'Gender',
+    genderNot: 'Not informed',
+    age: 'Age',
+    years: 'years old',
+    contact: 'Contact',
+    address: 'Address',
+    health: 'Health',
+    allergies: 'Allergies',
+    healthRestrictions: 'Health Conditions',
+    observations: 'Observations',
+    tagIngrown: 'Ingrown nails',
+    tagSensitive: 'Excessive sensitivity',
+    tagFungus: 'Mycosis/fungi',
+    close: 'Close',
+    editClient: 'Edit Client',
+    newClient: 'New Client',
+    fillBelow: 'Fill in the information below',
+    labelName: 'Name',
+    labelNamePlc: 'Full name',
+    labelEmail: 'Email',
+    labelLocPlc: 'City, Neighborhood',
+    labelAddress: 'Address',
+    labelAddressPlc: 'Street, Number',
+    labelBirth: 'Date of Birth',
+    labelSelect: 'Select',
+    labelAllergiesPlc: 'Describe allergies, if any',
+    labelHealthPlc: 'Describe relevant health conditions',
+    labelHealthTags: 'Health Notes',
+    checkIngrown: 'Prone to ingrown nails',
+    checkSensitive: 'Excessive skin sensitivity',
+    checkFungus: 'History or presence of mycosis/fungi',
+    cancel: 'Cancel',
+    saveBtn: 'Save Changes',
+    addBtn: 'Add Client'
+  },
+  'es-ES': {
+    title: 'Gestión de Clientes',
+    subtitle: 'Visualice y gestione los perfiles e historiales',
+    searchPlaceholder: 'Buscar cliente por nombre...',
+    statTotal: 'Total',
+    statMonth: 'Este Mes',
+    statVips: 'VIPs',
+    loading: 'Cargando clientes...',
+    empty: 'Ningún cliente encontrado.',
+    noPhone: 'Sin teléfono',
+    noLoc: 'Sin localidad',
+    active: 'Activo',
+    inactive: 'Inactivo',
+    visit: 'visita',
+    visits: 'visitas',
+    profileTitle: 'Perfil del Cliente',
+    profileSub: 'turnos completados',
+    basicData: 'Datos Básicos',
+    gender: 'Género',
+    genderNot: 'No informado',
+    age: 'Edad',
+    years: 'años',
+    contact: 'Contacto',
+    address: 'Dirección',
+    health: 'Salud',
+    allergies: 'Alergias',
+    healthRestrictions: 'Restricciones de Salud',
+    observations: 'Observaciones',
+    tagIngrown: 'Uñas encarnadas',
+    tagSensitive: 'Sensibilidad excesiva',
+    tagFungus: 'Micosis/hongos',
+    close: 'Cerrar',
+    editClient: 'Editar Cliente',
+    newClient: 'Nuevo Cliente',
+    fillBelow: 'Complete los datos a continuación',
+    labelName: 'Nombre',
+    labelNamePlc: 'Nombre completo',
+    labelEmail: 'Correo electrónico',
+    labelLocPlc: 'Ciudad, Barrio',
+    labelAddress: 'Dirección',
+    labelAddressPlc: 'Calle, Número',
+    labelBirth: 'Fecha de Nacimiento',
+    labelSelect: 'Seleccione',
+    labelAllergiesPlc: 'Describa alergias, si las hay',
+    labelHealthPlc: 'Describa condiciones de salud relevantes',
+    labelHealthTags: 'Notas de Salud',
+    checkIngrown: 'Tendencia a uñas encarnadas',
+    checkSensitive: 'Sensibilidad cutánea excesiva',
+    checkFungus: 'Historial o presencia de micosis/hongos',
+    cancel: 'Cancelar',
+    saveBtn: 'Guardar Cambios',
+    addBtn: 'Añadir Cliente'
+  }
+};
 
 export function ClientsScreen() {
+  const { systemLanguage } = useLanguage(); // 🌟 Obtendo o idioma ativo globalmente
+  const text = localTranslations[systemLanguage] || localTranslations['pt-BR'];
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
   const [clients, setClients] = useState([]);
@@ -36,7 +203,6 @@ export function ClientsScreen() {
     totalSpent: c?.totalGasto ? `R$ ${c.totalGasto}` : c?.totalSpent ?? 'R$ 0',
     isAtivo: c?.isAtivo ?? c?.ativo ?? true,
 
-    // Flags de Saúde
     possuiMicoseFungos: c?.possuiMicoseFungos ?? false,
     sensibilidadeExcessiva: c?.sensibilidadeExcessiva ?? false,
     possuiUnhasEncravadas: c?.possuiUnhasEncravadas ?? false,
@@ -44,42 +210,38 @@ export function ClientsScreen() {
     condicoesSaude: c?.condicoesSaude ?? '',
     observacoes: c?.observacoes ?? '',
 
-    // Dados Pessoais Adicionais
-    dataNascimento: c?.dataNascimento ?? '', // formato YYYY-MM-DD
+    dataNascimento: c?.dataNascimento ?? '', 
     genero: c?.genero ?? '',
 
-    // Endereço Completo
     cep: c?.cep ?? '',
     logradouro: c?.logradouro ?? c?.endereco ?? '',
     bairro: c?.bairro ?? '',
-    localidade: c?.localidade ?? '', // Cidade
+    localidade: c?.localidade ?? '', 
     numeroEnd: c?.numeroEnd ?? c?.numero ?? ''
   });
 
-  // Formata números como 11988887777 em (11) 98888-7777
-const formatarTelefoneBR = (telefone) => {
-  if (!telefone) return 'Não informado';
-  const limpo = String(telefone).replace(/\D/g, '');
-  if (limpo.length === 11) {
-    return `(${limpo.substring(0, 2)}) ${limpo.substring(2, 7)}-${limpo.substring(7)}`;
-  } else if (limpo.length === 10) {
-    return `(${limpo.substring(0, 2)}) ${limpo.substring(2, 6)}-${limpo.substring(6)}`;
-  }
-  return telefone; // Retorna original se não bater o tamanho
-};
+  const formatarTelefoneBR = (telefone) => {
+    if (!telefone) return text.genderNot;
+    const limpo = String(telefone).replace(/\D/g, '');
+    if (limpo.length === 11) {
+      return `(${limpo.substring(0, 2)}) ${limpo.substring(2, 7)}-${limpo.substring(7)}`;
+    } else if (limpo.length === 10) {
+      return `(${limpo.substring(0, 2)}) ${limpo.substring(2, 6)}-${limpo.substring(6)}`;
+    }
+    return telefone; 
+  };
 
-// Calcula a idade com base na data de nascimento (AAAA-MM-DD)
-const calcularIdade = (dataNasc) => {
-  if (!dataNasc) return '—';
-  const hoje = new Date();
-  const nascimento = new Date(dataNasc);
-  let idade = hoje.getFullYear() - nascimento.getFullYear();
-  const m = hoje.getMonth() - nascimento.getMonth();
-  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
-    idade--;
-  }
-  return isNaN(idade) ? '—' : `${idade} anos`;
-};
+  const calcularIdade = (dataNasc) => {
+    if (!dataNasc) return '—';
+    const hoje = new Date();
+    const nascimento = new Date(dataNasc);
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const m = hoje.getMonth() - nascimento.getMonth();
+    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+      idade--;
+    }
+    return isNaN(idade) ? '—' : `${idade} ${text.years}`;
+  };
 
   const carregarClientes = useCallback(async (busca = '') => {
     setLoading(true);
@@ -159,13 +321,22 @@ const calcularIdade = (dataNasc) => {
     }
   };
 
+  // Helper para tradução dos gêneros vindo do banco
+  const traduzirGenero = (g) => {
+    if (!g) return text.genderNot;
+    if (g === 'Feminino') return systemLanguage === 'en-US' ? 'Female' : systemLanguage === 'es-ES' ? 'Femenino' : 'Feminino';
+    if (g === 'Masculino') return systemLanguage === 'en-US' ? 'Male' : systemLanguage === 'es-ES' ? 'Masculino' : 'Masculino';
+    if (g === 'Outro') return systemLanguage === 'en-US' ? 'Other' : systemLanguage === 'es-ES' ? 'Otro' : 'Outro';
+    return g;
+  };
+
   return (
     <div className="pb-24 px-5 pt-6 bg-background min-h-screen">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-primary text-2xl font-bold">Gestão de Clientes</h2>
-          <p className="text-gray-600 text-sm">Visualize e gerencie os perfis e históricos</p>
+          <h2 className="text-primary text-2xl font-bold">{text.title}</h2>
+          <p className="text-gray-600 text-sm">{text.subtitle}</p>
         </div>
         <button
           onClick={() => handleOpenForm()}
@@ -182,7 +353,7 @@ const calcularIdade = (dataNasc) => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar cliente pelo nome..."
+          placeholder={text.searchPlaceholder}
           className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border-2 border-gray-200 focus:outline-none focus:border-primary transition-colors shadow-sm"
         />
       </div>
@@ -191,23 +362,23 @@ const calcularIdade = (dataNasc) => {
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white rounded-xl p-3 shadow-sm text-center border border-gray-100">
           <p className="text-2xl font-bold text-primary">{clients.length}</p>
-          <p className="text-gray-500 text-xs mt-1">Total</p>
+          <p className="text-gray-500 text-xs mt-1">{text.statTotal}</p>
         </div>
         <div className="bg-white rounded-xl p-3 shadow-sm text-center border border-gray-100">
           <p className="text-2xl font-bold text-accent">15</p>
-          <p className="text-gray-500 text-xs mt-1">Este Mês</p>
+          <p className="text-gray-500 text-xs mt-1">{text.statMonth}</p>
         </div>
         <div className="bg-white rounded-xl p-3 shadow-sm text-center border border-gray-100">
           <p className="text-2xl font-bold text-primary">3</p>
-          <p className="text-gray-500 text-xs mt-1">VIPs</p>
+          <p className="text-gray-500 text-xs mt-1">{text.statVips}</p>
         </div>
       </div>
 
       {/* Client List */}
       <div className="space-y-3">
-        {loading && <p className="text-center py-4 text-gray-500 text-sm">Carregando clientes...</p>}
+        {loading && <p className="text-center py-4 text-gray-500 text-sm">{text.loading}</p>}
         {!loading && clients.length === 0 && (
-          <p className="text-center py-4 text-gray-500 text-sm">Nenhum cliente encontrado.</p>
+          <p className="text-center py-4 text-gray-500 text-sm">{text.empty}</p>
         )}
         {!loading && clients.map((client) => (
           <div
@@ -221,19 +392,19 @@ const calcularIdade = (dataNasc) => {
                 </div>
                 <div className="min-w-0">
                   <p className="font-bold text-gray-800 truncate">{client.name}</p>
-                  <p className="text-gray-500 text-sm">{client.phone || 'Sem telefone'}</p>
-                  <p className="text-gray-400 text-xs mt-0.5 truncate">{client.localidade || client.endereco || 'Sem localidade'}</p>
+                  <p className="text-gray-500 text-sm">{client.phone || text.noPhone}</p>
+                  <p className="text-gray-400 text-xs mt-0.5 truncate">{client.localidade || client.endereco || text.noLoc}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${client.isAtivo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {client.isAtivo ? 'Ativo' : 'Inativo'}
+                  {client.isAtivo ? text.active : text.inactive}
                 </span>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-primary">
-                {client.totalVisits} {client.totalVisits === 1 ? 'visita' : 'visitas'}
+                {client.totalVisits} {client.totalVisits === 1 ? text.visit : text.visits}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -257,355 +428,351 @@ const calcularIdade = (dataNasc) => {
         ))}
       </div>
 
-      {/* Client Profile Modal */}
+      {/* Client Profile */}
       {selectedClient && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center p-0 md:p-4 transition-opacity animate-fadeIn">
-          {/* Backdrop de Fechamento */}
-          <div className="absolute inset-0" onClick={() => setSelectedClient(null)}></div>
-
-          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md max-h-[85vh] md:max-h-[90vh] overflow-y-auto z-10 shadow-2xl relative flex flex-col animate-slideUp">
-
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-primary text-white p-5 shrink-0 z-20 shadow-sm">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <User className="text-white" size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-white text-lg font-bold truncate max-w-[220px]">{selectedClient.name}</h3>
-                    <p className="text-purple-200 text-xs font-medium">{selectedClient.totalVisits} atendimentos realizados</p>
-                  </div>
+        <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-fadeIn">
+          <div className="sticky top-0 bg-primary text-white p-5 shrink-0 z-20 shadow-sm">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                  <User className="text-white" size={24} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedClient(null);
-                      handleOpenForm(selectedClient);
-                    }}
-                    className="p-1.5 bg-white/10 rounded-full text-white/90 hover:text-white transition-colors"
-                  >
-                    <Edit2 size={20} />
-                  </button>
-                  <button
-                    onClick={() => setSelectedClient(null)}
-                    className="p-1.5 bg-white/10 rounded-full text-white/90 hover:text-white transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
+                <div className="min-w-0">
+                  <h3 className="text-white text-lg font-bold truncate">{text.profileTitle}</h3>
+                  <p className="text-purple-200 text-xs font-medium">{selectedClient.totalVisits} {text.profileSub}</p>
                 </div>
               </div>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-5 space-y-6 overflow-y-auto">
-              
-              {/* Nome e Avatar */}
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <span className="text-primary font-bold text-2xl">
-                    {selectedClient.name ? selectedClient.name.charAt(0) : 'U'}
-                  </span>
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-gray-800">{selectedClient.name}</h4>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mt-1 ${selectedClient.isAtivo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                    {selectedClient.isAtivo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dados Básicos */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Dados Básicos</h5>
-                
-                <div className="flex items-center gap-3">
-                  <User size={18} className="text-gray-400" />
-                  <span className="text-gray-700">
-                    Gênero: {selectedClient.genero || 'Não informado'}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <Calendar size={18} className="text-gray-400" />
-                  <span className="text-gray-700">
-                    Idade: {calcularIdade(selectedClient.dataNascimento)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dados de Contato */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Contato</h5>
-                
-                <div className="flex items-center gap-3">
-                  <Phone size={18} className="text-gray-400" />
-                  <span className="text-gray-700">
-                    {formatarTelefoneBR(selectedClient.phone)}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <Mail size={18} className="text-gray-400" />
-                  <span className="text-gray-700">
-                    {selectedClient.email || 'Não informado'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dados de Endereço */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Endereço</h5>
-                
-                {selectedClient.cep && (
-                  <div className="flex items-center gap-3">
-                    <MapPin size={18} className="text-gray-400" />
-                    <span className="text-gray-700">CEP: {selectedClient.cep}</span>
-                  </div>
-                )}
-                
-                {selectedClient.logradouro && (
-                  <div className="flex items-start gap-3">
-                    <MapPin size={18} className="text-gray-400 mt-0.5" />
-                    <span className="text-gray-700">
-                      {selectedClient.logradouro}
-                      {selectedClient.numeroEnd && `, ${selectedClient.numeroEnd}`}
-                    </span>
-                  </div>
-                )}
-                
-                {selectedClient.bairro && (
-                  <div className="flex items-center gap-3">
-                    <MapPin size={18} className="text-gray-400" />
-                    <span className="text-gray-700">Bairro: {selectedClient.bairro}</span>
-                  </div>
-                )}
-                
-                {selectedClient.localidade && (
-                  <div className="flex items-center gap-3">
-                    <MapPin size={18} className="text-gray-400" />
-                    <span className="text-gray-700">Localidade: {selectedClient.localidade}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Saúde */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Saúde</h5>
-                
-                {selectedClient.alergias && (
-                  <div className="bg-yellow-50 p-3 rounded-xl">
-                    <p className="text-xs font-semibold text-yellow-800 mb-1">Alergias</p>
-                    <p className="text-gray-700 text-sm">{selectedClient.alergias}</p>
-                  </div>
-                )}
-                
-                {selectedClient.condicoesSaude && (
-                  <div className="bg-blue-50 p-3 rounded-xl">
-                    <p className="text-xs font-semibold text-blue-800 mb-1">Restrições de Saúde</p>
-                    <p className="text-gray-700 text-sm">{selectedClient.condicoesSaude}</p>
-                  </div>
-                )}
-                
-                {selectedClient.observacoes && (
-                  <div className="bg-gray-50 p-3 rounded-xl">
-                    <p className="text-xs font-semibold text-gray-700 mb-1">Observações</p>
-                    <p className="text-gray-700 text-sm">{selectedClient.observacoes}</p>
-                  </div>
-                )}
-
-                {/* Observações de Saúde (Tags) */}
-                <div className="space-y-2">
-                  {selectedClient.possuiUnhasEncravadas && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">
-                      Unhas encravadas
-                    </span>
-                  )}
-                  {selectedClient.sensibilidadeExcessiva && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
-                      Sensibilidade excessiva
-                    </span>
-                  )}
-                  {selectedClient.possuiMicoseFungos && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                      Micose/fungos
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Estatísticas */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-primary">{selectedClient.totalVisits}</p>
-                  <p className="text-sm text-gray-600">Visitas</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-xl text-center">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Última visita</p>
-                  <p className="text-xs text-gray-600">
-                    {selectedClient.lastVisit && selectedClient.lastVisit !== '—'
-                      ? new Date(selectedClient.lastVisit).toLocaleDateString('pt-BR')
-                      : '—'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Client Form Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center p-0 md:p-4 transition-opacity animate-fadeIn">
-          <div className="absolute inset-0" onClick={() => setIsModalOpen(false)}></div>
-          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md max-h-[85vh] md:max-h-[90vh] overflow-y-auto z-10 shadow-2xl relative flex flex-col animate-slideUp">
-            <div className="sticky top-0 bg-white p-5 shrink-0 z-20 shadow-sm border-b border-gray-100">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-gray-800">{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-                <button onClick={() => setIsModalOpen(false)} className="p-1.5 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200">
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    setSelectedClient(null);
+                    handleOpenForm(selectedClient);
+                  }}
+                  className="p-1.5 bg-white/10 rounded-full text-white/90 hover:text-white transition-colors"
+                >
+                  <Edit2 size={20} />
+                </button>
+                <button
+                  onClick={() => setSelectedClient(null)}
+                  className="p-1.5 bg-white/10 rounded-full text-white/90 hover:text-white transition-colors"
+                >
                   <X size={20} />
                 </button>
               </div>
             </div>
-            <div className="p-5 space-y-4 overflow-y-auto">
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Nome</label>
-                <input
-                  type="text"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Nome completo"
-                />
+          </div>
+
+          <div className="p-5 space-y-6 overflow-y-auto flex-1">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-primary font-bold text-2xl">
+                  {selectedClient.name ? selectedClient.name.charAt(0) : 'U'}
+                </span>
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">WhatsApp</label>
-                <input
-                  type="text"
-                  value={formData.whatsapp}
-                  onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="email@exemplo.com"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Localidade</label>
-                <input
-                  type="text"
-                  value={formData.localidade}
-                  onChange={(e) => setFormData({ ...formData, localidade: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Cidade, Bairro"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Endereço</label>
-                <input
-                  type="text"
-                  value={formData.endereco}
-                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Rua, Número"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Data de Nascimento</label>
-                <input
-                  type="date"
-                  value={formData.dataNascimento}
-                  onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Gênero</label>
-                <select
-                  value={formData.genero}
-                  onChange={(e) => setFormData({ ...formData, genero: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                >
-                  <option value="">Selecione</option>
-                  <option value="Feminino">Feminino</option>
-                  <option value="Masculino">Masculino</option>
-                  <option value="Outro">Outro</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Alergias</label>
-                <textarea
-                  value={formData.alergias}
-                  onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Descreva alergias, se houver"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Condições de Saúde</label>
-                <textarea
-                  value={formData.condicoesSaude}
-                  onChange={(e) => setFormData({ ...formData, condicoesSaude: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Descreva condições de saúde relevantes"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-gray-700 block">Observações de Saúde</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.possuiUnhasEncravadas}
-                    onChange={(e) => setFormData({ ...formData, possuiUnhasEncravadas: e.target.checked })}
-                    className="w-5 h-5 text-primary"
-                  />
-                  <span className="text-gray-700 text-sm">Tendência a unhas encravadas</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.sensibilidadeExcessiva}
-                    onChange={(e) => setFormData({ ...formData, sensibilidadeExcessiva: e.target.checked })}
-                    className="w-5 h-5 text-primary"
-                  />
-                  <span className="text-gray-700 text-sm">Sensibilidade cutânea excessiva</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.possuiMicoseFungos}
-                    onChange={(e) => setFormData({ ...formData, possuiMicoseFungos: e.target.checked })}
-                    className="w-5 h-5 text-primary"
-                  />
-                  <span className="text-gray-700 text-sm">Histórico ou presença de micose/fungos</span>
-                </div>
+                <h4 className="text-xl font-bold text-gray-800">{selectedClient.name}</h4>
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mt-1 ${selectedClient.isAtivo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                  {selectedClient.isAtivo ? text.active : text.inactive}
+                </span>
               </div>
             </div>
-            <div className="p-5 border-t border-gray-100">
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSubmitForm}
-                  className="flex-1 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90"
-                >
-                  {editingClient ? 'Salvar Alterações' : 'Adicionar Cliente'}
-                </button>
+
+            <div className="space-y-4">
+              <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{text.basicData}</h5>
+              <div className="flex items-center gap-3">
+                <User size={18} className="text-gray-400" />
+                <span className="text-gray-700">
+                  {text.gender}: {traduzirGenero(selectedClient.genero)}
+                </span>
               </div>
+              <div className="flex items-center gap-3">
+                <Calendar size={18} className="text-gray-400" />
+                <span className="text-gray-700">
+                  {text.age}: {calcularIdade(selectedClient.dataNascimento)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{text.contact}</h5>
+              <div className="flex items-center gap-3">
+                <Phone size={18} className="text-gray-400" />
+                <span className="text-gray-700">
+                  {formatarTelefoneBR(selectedClient.phone)}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Mail size={18} className="text-gray-400" />
+                <span className="text-gray-700">
+                  {selectedClient.email || text.genderNot}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{text.address}</h5>
+              {selectedClient.cep && (
+                <div className="flex items-center gap-3">
+                  <MapPin size={18} className="text-gray-400" />
+                  <span className="text-gray-700">CEP: {selectedClient.cep}</span>
+                </div>
+              )}
+              {selectedClient.logradouro && (
+                <div className="flex items-start gap-3">
+                  <MapPin size={18} className="text-gray-400 mt-0.5" />
+                  <span className="text-gray-700">
+                    {selectedClient.logradouro}
+                    {selectedClient.numeroEnd && `, ${selectedClient.numeroEnd}`}
+                  </span>
+                </div>
+              )}
+              {selectedClient.bairro && (
+                <div className="flex items-center gap-3">
+                  <MapPin size={18} className="text-gray-400" />
+                  <span className="text-gray-700">Bairro: {selectedClient.bairro}</span>
+                </div>
+              )}
+              {selectedClient.localidade && (
+                <div className="flex items-center gap-3">
+                  <MapPin size={18} className="text-gray-400" />
+                  <span className="text-gray-700">Localidade: {selectedClient.localidade}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{text.health}</h5>
+              {selectedClient.alergias && (
+                <div className="bg-yellow-50 p-3 rounded-xl">
+                  <p className="text-xs font-semibold text-yellow-800 mb-1">{text.allergies}</p>
+                  <p className="text-gray-700 text-sm">{selectedClient.alergias}</p>
+                </div>
+              )}
+              {selectedClient.condicoesSaude && (
+                <div className="bg-blue-50 p-3 rounded-xl">
+                  <p className="text-xs font-semibold text-blue-800 mb-1">{text.healthRestrictions}</p>
+                  <p className="text-gray-700 text-sm">{selectedClient.condicoesSaude}</p>
+                </div>
+              )}
+              {selectedClient.observacoes && (
+                <div className="bg-gray-50 p-3 rounded-xl">
+                  <p className="text-xs font-semibold text-gray-700 mb-1">{text.observations}</p>
+                  <p className="text-gray-700 text-sm">{selectedClient.observacoes}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {selectedClient.possuiUnhasEncravadas && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">
+                    {text.tagIngrown}
+                  </span>
+                )}
+                {selectedClient.sensibilidadeExcessiva && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                    {text.tagSensitive}
+                  </span>
+                )}
+                {selectedClient.possuiMicoseFungos && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                    {text.tagFungus}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded-xl text-center">
+                <p className="text-2xl font-bold text-primary">{selectedClient.totalVisits}</p>
+                <p className="text-sm text-gray-600">{selectedClient.totalVisits === 1 ? text.visit : text.visits}</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-xl text-center">
+                <p className="text-sm font-semibold text-gray-700 mb-1">Última visita</p>
+                <p className="text-xs text-gray-600">
+                  {selectedClient.lastVisit && selectedClient.lastVisit !== '—'
+                    ? new Date(selectedClient.lastVisit).toLocaleDateString(systemLanguage)
+                    : '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5 pb-8 border-t border-gray-100 shrink-0 bg-white">
+            <button
+              onClick={() => setSelectedClient(null)}
+              className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+            >
+              {text.close}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Client Form */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-fadeIn">
+          <div className="sticky top-0 bg-primary text-white p-5 shrink-0 z-20 shadow-sm">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                  {editingClient ? <Edit2 className="text-white" size={22} /> : <Plus className="text-white" size={22} />}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-white text-lg font-bold truncate">
+                    {editingClient ? text.editClient : text.newClient}
+                  </h3>
+                  <p className="text-purple-200 text-xs font-medium">
+                    {editingClient ? editingClient.name : text.fillBelow}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 bg-white/10 rounded-full text-white/90 hover:text-white transition-colors shrink-0"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5 space-y-4 overflow-y-auto flex-1">
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">{text.labelName}</label>
+              <input
+                type="text"
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+                placeholder={text.labelNamePlc}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">WhatsApp</label>
+              <input
+                type="text"
+                value={formData.whatsapp}
+                onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">{text.labelEmail}</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">Localidade</label>
+              <input
+                type="text"
+                value={formData.localidade}
+                onChange={(e) => setFormData({ ...formData, localidade: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+                placeholder={text.labelLocPlc}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">{text.labelAddress}</label>
+              <input
+                type="text"
+                value={formData.endereco}
+                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+                placeholder={text.labelAddressPlc}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">{text.labelBirth}</label>
+              <input
+                type="date"
+                value={formData.dataNascimento}
+                onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">{text.gender}</label>
+              <select
+                value={formData.genero}
+                onChange={(e) => setFormData({ ...formData, genero: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+              >
+                <option value="">{text.labelSelect}</option>
+                <option value="Feminino">{systemLanguage === 'en-US' ? 'Female' : systemLanguage === 'es-ES' ? 'Femenino' : 'Feminino'}</option>
+                <option value="Masculino">{systemLanguage === 'en-US' ? 'Male' : systemLanguage === 'es-ES' ? 'Masculino' : 'Masculino'}</option>
+                <option value="Outro">{systemLanguage === 'en-US' ? 'Other' : systemLanguage === 'es-ES' ? 'Otro' : 'Outro'}</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">{text.allergies}</label>
+              <textarea
+                value={formData.alergias}
+                onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+                placeholder={text.labelAllergiesPlc}
+                rows={2}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">{text.healthRestrictions}</label>
+              <textarea
+                value={formData.condicoesSaude}
+                onChange={(e) => setFormData({ ...formData, condicoesSaude: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
+                placeholder={text.labelHealthPlc}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-700 block">{text.labelHealthTags}</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.possuiUnhasEncravadas}
+                  onChange={(e) => setFormData({ ...formData, possuiUnhasEncravadas: e.target.checked })}
+                  className="w-5 h-5 text-primary"
+                />
+                <span className="text-gray-700 text-sm">{text.checkIngrown}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.sensibilidadeExcessiva}
+                  onChange={(e) => setFormData({ ...formData, sensibilidadeExcessiva: e.target.checked })}
+                  className="w-5 h-5 text-primary"
+                />
+                <span className="text-gray-700 text-sm">{text.checkSensitive}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.possuiMicoseFungos}
+                  onChange={(e) => setFormData({ ...formData, possuiMicoseFungos: e.target.checked })}
+                  className="w-5 h-5 text-primary"
+                />
+                <span className="text-gray-700 text-sm">{text.checkFungus}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5 pb-8 border-t border-gray-100 shrink-0 bg-white">
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+              >
+                {text.cancel}
+              </button>
+              <button
+                onClick={handleSubmitForm}
+                className="flex-1 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors"
+              >
+                {editingClient ? text.saveBtn : text.addBtn}
+              </button>
             </div>
           </div>
         </div>

@@ -1,29 +1,59 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+
+// ==========================================
+// COMPONENTES DE NAVEGAÇÃO INTERNA DO ADMIN
+// ==========================================
 import { BottomNav } from './components/BottomNav';
 import { Sidebar } from './components/Sidebar';
+
+// ==========================================
+// TELAS PÚBLICAS (FLUXO DO CLIENTE)
+// ==========================================
 import { LandingPage } from './components/LandingPage';
 import { LoginScreen } from './components/LoginScreen';
 import { ClientPortal } from './components/ClientPortal';
+import { BookingScreen } from './components/BookingScreen';
+
+// ==========================================
+// TELAS PRINCIPAIS DO PAINEL ADMINISTRATIVO
+// ==========================================
 import { HomeScreen } from './components/HomeScreen';
 import { CalendarScreen } from './components/CalendarScreen';
-import { BookingScreen } from './components/BookingScreen';
 import { FinanceScreen } from './components/FinanceScreen';
 import { ClientsScreen } from './components/ClientsScreen';
 import { DashboardScreen } from './components/DashboardScreen';
+import { NotesScreen } from './components/NotesScreen';
+import { SettingsScreen } from './components/SettingsScreen';
+
+// ==========================================
+// MODAIS ADMINISTRATIVOS (MÓDULOS DE SUPORTE)
+// ==========================================
 import { ServiceCatalogAdmin } from './components/ServiceCatalogAdmin';
 import { AutomationDashboard } from './components/AutomationDashboard';
 import { ProcessFlowDiagram } from './components/ProcessFlowDiagram';
-import { NotesScreen } from './components/NotesScreen';
-import { SettingsScreen } from './components/SettingsScreen';
+
+// ==========================================
+// SUB-TELAS DE CONFIGURAÇÃO (DENTRO DE AJUSTES)
+// ==========================================
 import { LocationsManagement } from './components/settings/LocationsManagement';
 import { BusinessHours } from './components/settings/BusinessHours';
 import { InventoryManagement } from './components/settings/InventoryManagement';
 import { InactiveClients } from './components/settings/InactiveClients';
 import { AppSettings } from './components/settings/AppSettings';
+
+// ==========================================
+// SEGURANÇA E INFRAESTRUTURA
+// ==========================================
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 
-// 🚀 CONTROLE DE PRODUÇÃO: Mude para 'true' para ativar a tela de manutenção nas abas públicas
+// 🌟 Importando o Contexto de Idioma Customizado
+import { LanguageProvider } from '../context/LanguageContext';
+
+// 🌟 Importando o método para buscar a configuração inicial do banco de dados
+import { obterConfiguracoes } from '../api';
+
+// 🚀 CONTROLE DE PRODUÇÃO
 const IS_MAINTENANCE_MODE = false;
 
 export default function App() {
@@ -33,6 +63,24 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [settingsScreen, setSettingsScreen] = useState('main');
   const [portalTargetClient, setPortalTargetClient] = useState(null);
+
+  // 🌟 ESTADO GLOBAL DO IDIOMA ADMINISTRATIVO
+  const [systemLanguage, setSystemLanguage] = useState('pt-BR');
+
+  // 🔄 Busca o idioma inicial salvo no banco assim que o App inicializa
+  useEffect(() => {
+    async function carregarIdiomaInicial() {
+      try {
+        const configs = await obterConfiguracoes();
+        if (configs && configs.idioma) {
+          setSystemLanguage(configs.idioma);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar idioma inicial:', err);
+      }
+    }
+    carregarIdiomaInicial();
+  }, []);
 
   const handleBookNow = () => setAppMode('booking');
   const handleAdminLogin = () => setAppMode('admin-login');
@@ -45,7 +93,6 @@ export default function App() {
 
   const handleBackToLanding = () => setAppMode('landing');
 
-  // ✅ CORREÇÃO: Ativa o menu de configurações lateral/mobile perfeitamente
   const handleSettingsClick = () => {
     setSettingsScreen('main');
     setShowSettings(true);
@@ -75,7 +122,7 @@ export default function App() {
     setActiveScreen('calendar');
   };
 
-  // ✅ Centralização Limpa da Renderização das Sub-telas de Configuração
+  // ✅ Removido a prop redundante "currentLang" nas telas de gerenciamento direto
   const renderSettingsScreen = () => {
     switch (settingsScreen) {
       case 'locations':
@@ -103,20 +150,26 @@ export default function App() {
             <ServiceCatalogAdmin />
           </div>
         );
-      case 'app-settings':
-        return <AppSettings onBack={handleSettingsBack} />;
+      case 'settings': // 🌟 Alterado de 'app-settings' para 'settings' para bater com o ID do botão
+        return (
+          <AppSettings
+            onBack={handleSettingsBack}
+            currentLang={systemLanguage}
+            onLanguageChange={setSystemLanguage}
+          />
+        );
       default:
         return (
           <SettingsScreen
             onBack={() => setShowSettings(false)}
             onNavigate={handleSettingsNavigate}
             onLogout={handleLogout}
+            currentLang={systemLanguage}
           />
         );
     }
   };
 
-  // Renderizador principal da área de trabalho do Administrador
   const renderScreen = () => {
     switch (activeScreen) {
       case 'home':
@@ -128,18 +181,19 @@ export default function App() {
             onSettingsClick={handleSettingsClick}
             onLogout={handleLogout}
             onVerProximosAgendamentos={handleVerProximosAgendamentos}
+            currentLang={systemLanguage}
           />
         );
       case 'calendar':
-        return <CalendarScreen />;
+        return <CalendarScreen currentLang={systemLanguage} />;
       case 'finance':
-        return <FinanceScreen />;
+        return <FinanceScreen currentLang={systemLanguage} />;
       case 'dashboard':
-        return <DashboardScreen />;
+        return <DashboardScreen currentLang={systemLanguage} />;
       case 'clients':
-        return <ClientsScreen />;
-      case 'notes': 
-        return <NotesScreen />; 
+        return <ClientsScreen currentLang={systemLanguage} />;
+      case 'notes':
+        return <NotesScreen currentLang={systemLanguage} />;
       default:
         return (
           <HomeScreen
@@ -149,12 +203,12 @@ export default function App() {
             onSettingsClick={handleSettingsClick}
             onLogout={handleLogout}
             onVerProximosAgendamentos={handleVerProximosAgendamentos}
+            currentLang={systemLanguage}
           />
         );
     }
   };
 
-  // 1. Landing Page Pública (Ponto de entrada do cliente)
   if (appMode === 'landing') {
     return (
       <div className="min-h-screen bg-background dark">
@@ -167,9 +221,6 @@ export default function App() {
     );
   }
 
-  // ==========================================
-  // 🛠️ INTERCEPTADOR DE FLUXOS DE MANUTENÇÃO PARA PRODUÇÃO
-  // ==========================================
   if (IS_MAINTENANCE_MODE) {
     if (appMode === 'client-portal' || appMode === 'booking' || appMode === 'admin-login') {
       return <MaintenanceScreen onBack={handleBackToLanding} />;
@@ -200,91 +251,88 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} onBack={handleBackToLanding} />;
   }
 
-  // 2. Painel Administrativo Interno Seguro
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar para telas grandes (Desktop) */}
-      <Sidebar
-        activeScreen={activeScreen}
-        onNavigate={(screen) => {
-          setShowSettings(false); // Fecha o painel de ajustes ao trocar de aba principal
-          setActiveScreen(screen);
-        }}
-        onSettingsClick={handleSettingsClick}
-        onLogout={handleLogout}
-      />
-
-      {/* Área de Conteúdo Principal Dinâmico */}
-      <div className="lg:pl-20 pb-20 lg:pb-0">
-        <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto relative">
-          {renderScreen()}
-        </div>
-      </div>
-
-      {/* Barra de Navegação Inferior (Mobile) */}
-      <BottomNav
-        activeScreen={showSettings ? 'settings' : activeScreen}
-        onNavigate={(screen) => {
-          if (screen === 'settings') {
-            handleSettingsClick();
-          } else {
+    <LanguageProvider>
+      <div className="min-h-screen bg-background">
+        <Sidebar
+          activeScreen={activeScreen}
+          onNavigate={(screen) => {
             setShowSettings(false);
             setActiveScreen(screen);
-          }
-        }}
-      />
+          }}
+          onSettingsClick={handleSettingsClick}
+          onLogout={handleLogout}
+        />
 
-      {/* Gaveta/Painel de Configurações em Tela Cheia */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20 animate-fadeIn">
-          <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
-            {renderSettingsScreen()}
+        <div className="lg:pl-20 pb-20 lg:pb-0">
+          <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto relative">
+            {renderScreen()}
           </div>
         </div>
-      )}
 
-      {/* Modais Flutuantes disparados pelo Dashboard Home */}
-      {activeModal === 'services' && (
-        <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
-          <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
-            <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
-              <h2 className="text-primary font-bold">Catálogo de Serviços</h2>
-              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="text-gray-600" size={24} />
-              </button>
+        <BottomNav
+          activeScreen={showSettings ? 'settings' : activeScreen}
+          onNavigate={(screen) => {
+            if (screen === 'settings') {
+              handleSettingsClick();
+            } else {
+              setShowSettings(false);
+              setActiveScreen(screen);
+            }
+          }}
+        />
+
+        {showSettings && (
+          <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20 animate-fadeIn">
+            <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
+              {renderSettingsScreen()}
             </div>
-            <ServiceCatalogAdmin />
           </div>
-        </div>
-      )}
+        )}
 
-      {activeModal === 'automation' && (
-        <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
-          <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
-            <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
-              <h2 className="text-primary font-bold">Painel de Automações</h2>
-              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="text-gray-600" size={24} />
-              </button>
+        {/* Modais Administrativos */}
+        {activeModal === 'services' && (
+          <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
+            <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
+              <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
+                <h2 className="text-primary font-bold">Catálogo de Serviços</h2>
+                <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="text-gray-600" size={24} />
+                </button>
+              </div>
+              <ServiceCatalogAdmin />
             </div>
-            <AutomationDashboard />
           </div>
-        </div>
-      )}
+        )}
 
-      {activeModal === 'process' && (
-        <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
-          <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
-            <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
-              <h2 className="text-primary font-bold">Diagrama de Fluxos</h2>
-              <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="text-gray-600" size={24} />
-              </button>
+        {activeModal === 'automation' && (
+          <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
+            <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
+              <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
+                <h2 className="text-primary font-bold">Painel de Automações</h2>
+                <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="text-gray-600" size={24} />
+                </button>
+              </div>
+              <AutomationDashboard />
             </div>
-            <ProcessFlowDiagram />
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {activeModal === 'process' && (
+          <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:pl-20">
+            <div className="max-w-md lg:max-w-7xl 2xl:max-w-[1920px] mx-auto">
+              <div className="sticky top-0 bg-background px-5 py-4 border-b border-gray-200 flex justify-between items-center z-10">
+                <h2 className="text-primary font-bold">Diagrama de Fluxos</h2>
+                <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="text-gray-600" size={24} />
+                </button>
+              </div>
+              <ProcessFlowDiagram />
+            </div>
+          </div>
+        )}
+      </div>
+    </LanguageProvider>
   );
 }

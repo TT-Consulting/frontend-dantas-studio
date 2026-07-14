@@ -1,13 +1,17 @@
 import { House, Calendar, DollarSign, StickyNote, BarChart3, Settings } from 'lucide-react';
+// 🌟 Importa o hook do nosso contexto central de idiomas
+import { useLanguage } from '../../context/LanguageContext';
 
 export function BottomNav({ activeScreen, onNavigate }) {
+  const { t } = useLanguage();
+
   const navItems = [
-    { id: 'home', icon: House, label: 'Home' },
-    { id: 'calendar', icon: Calendar, label: 'Agenda' },
-    { id: 'finance', icon: DollarSign, label: 'Finanças' },
-    { id: 'dashboard', icon: BarChart3, label: 'Relatórios' },
-    { id: 'notes', icon: StickyNote, label: 'Notas' },
-    { id: 'settings', icon: Settings, label: 'Menu' },
+    { id: 'home', icon: House, label: t('navHome') },
+    { id: 'calendar', icon: Calendar, label: t('navCalendar') },
+    { id: 'finance', icon: DollarSign, label: t('navFinance') },
+    { id: 'dashboard', icon: BarChart3, label: t('navDashboard') },
+    { id: 'notes', icon: StickyNote, label: t('navNotes') },
+    { id: 'settings', icon: Settings, label: 'Menu' }, // Mantido fixo ou pode mapear se preferir
   ];
 
   return (

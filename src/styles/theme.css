@@ -4,61 +4,61 @@
   --font-size: 16px;
   --font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   
-  /* Paleta Light Moderna & Elegante (Como padrão) */
-  --background: #fff8dc;           /* Branco suave */
+  /* Paleta Light Moderna & Elegante */
+  --background: #FFFFFF;           /* Branco puro (fundo da imagem) */
   --foreground: #111827;           /* Texto escuro para leitura confortável */
   --card: #FFFFFF;                 /* Cards brancos */
   --card-foreground: #111827;
   --popover: #FFFFFF;
   --popover-foreground: #111827;
   
-  /* Cores de Identidade Elevadas */
-  --primary: #7C3AED;              /* Roxo moderno */
+  /* Cores de Identidade Baseadas na Nova Paleta */
+  --primary: #C51B53;              /* Rosa escuro / Magenta (Detalhes vibrantes e textos principais) */
   --primary-foreground: #FFFFFF;
-  --secondary: #F3F4F6;            /* Elementos neutros secundários */
-  --secondary-foreground: #4B5563;
-  --muted: #F3F4F6;
+  --secondary: #FCD3DE;            /* Rosa bebê bem claro (Fundos secundários e detalhes suaves) */
+  --secondary-foreground: #C51B53;
+  --muted: #F7A4BA;                /* Rosa claro / Pastel */
   --muted-foreground: #6B7280;
   
-  /* Destaque Máximo para Conversão/Unhas */
-  --accent: #EC4899;               /* Pink vibrante */
+  /* Destaque Máximo para Conversão/Botões */
+  --accent: #E45883;               /* Rosa médio / Chiclete (Corpo central e botões de agendamento) */
   --accent-foreground: #FFFFFF;
   
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
-  --border: #E5E7EB; /* Bordas sutis em telas claras */
+  --border: #F7A4BA;               /* Bordas sutis usando o Rosa Claro */
   --input: transparent;
-  --input-background: #F9FAFB;
+  --input-background: #FCD3DE;
   --switch-background: #D1D5DB;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #7C3AED;
+  --ring: #C51B53;                 /* Anel de foco combinando com o Magenta */
   
   --radius: 0.75rem;
 }
 
-/* Dark mode for Landing Page */
+/* Modo Escuro (Ajustado mantendo a identidade da nova paleta) */
 .dark {
-  --background: #0D0C10;           /* Grafite ultra profundo */
-  --foreground: #F3F4F6;           /* Branco suave para leitura confortável */
-  --card: #16151A;                 /* Cards levemente mais claros que o fundo */
+  --background: #0D0C10;           
+  --foreground: #F3F4F6;           
+  --card: #16151A;                 
   --card-foreground: #F3F4F6;
   --popover: #16151A;
   --popover-foreground: #F3F4F6;
-  --primary: #A855F7;              /* Roxo Neon moderno */
+  --primary: #E45883;              /* Rosa médio para melhor contraste no escuro */
   --primary-foreground: #FFFFFF;
-  --secondary: #1F1E24;            /* Elementos neutros secundários */
+  --secondary: #1F1E24;            
   --secondary-foreground: #E5E7EB;
-  --muted: #1F1E24;
+  --muted: #C51B53;                
   --muted-foreground: #9CA3AF;
-  --accent: #FF4081;               /* Pink vibrante */
+  --accent: #C51B53;               /* Magenta em destaque no modo escuro */
   --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
-  --border: rgba(255, 255, 255, 0.08); /* Bordas sutis em telas escuras */
+  --border: rgba(228, 88, 131, 0.15); 
   --input-background: #1F1E24;
   --switch-background: #374151;
-  --ring: #A855F7;
+  --ring: #E45883;
 }
 
 @theme inline {

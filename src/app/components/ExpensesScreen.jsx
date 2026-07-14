@@ -1,8 +1,79 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { financeAPI } from '../../api';
+import { useLanguage } from '../../context/LanguageContext'; // 🌟 Importando o hook de idioma
+
+// Dicionário local para a tela de Despesas
+const localTranslations = {
+  'pt-BR': {
+    title: 'Segregação Financeira',
+    subtitle: 'Acompanhe suas despesas',
+    totalBusiness: 'Total Empresarial',
+    totalPersonal: 'Total Pessoal',
+    btnAddExpense: 'Adicionar Nova Despesa',
+    formTitle: 'Nova Despesa',
+    formType: 'Tipo de Despesa',
+    typeBusiness: 'Empresarial',
+    typePersonal: 'Pessoal',
+    labelDesc: 'Descrição',
+    placeholderDesc: 'Digite a descrição',
+    labelValue: 'Valor',
+    labelDate: 'Data',
+    btnCancel: 'Cancelar',
+    btnSave: 'Salvar',
+    filterAll: 'Todas',
+    historyTitle: 'Despesas Recentes',
+    loading: 'Carregando despesas...',
+    alertFields: 'Por favor, preencha a descrição e o valor corretamente!'
+  },
+  'en-US': {
+    title: 'Financial Segregation',
+    subtitle: 'Track your expenses',
+    totalBusiness: 'Business Total',
+    totalPersonal: 'Personal Total',
+    btnAddExpense: 'Add New Expense',
+    formTitle: 'New Expense',
+    formType: 'Expense Type',
+    typeBusiness: 'Business',
+    typePersonal: 'Personal',
+    labelDesc: 'Description',
+    placeholderDesc: 'Enter description',
+    labelValue: 'Amount',
+    labelDate: 'Date',
+    btnCancel: 'Cancel',
+    btnSave: 'Save',
+    filterAll: 'All',
+    historyTitle: 'Recent Expenses',
+    loading: 'Loading expenses...',
+    alertFields: 'Please fill in the description and amount correctly!'
+  },
+  'es-ES': {
+    title: 'Segregación Financiera',
+    subtitle: 'Haga un seguimiento de sus gastos',
+    totalBusiness: 'Total Empresarial',
+    totalPersonal: 'Total Personal',
+    btnAddExpense: 'Añadir Nuevo Gasto',
+    formTitle: 'Nuevo Gasto',
+    formType: 'Tipo de Gasto',
+    typeBusiness: 'Empresarial',
+    typePersonal: 'Personal',
+    labelDesc: 'Descripción',
+    placeholderDesc: 'Ingrese la descripción',
+    labelValue: 'Valor',
+    labelDate: 'Fecha',
+    btnCancel: 'Cancelar',
+    btnSave: 'Guardar',
+    filterAll: 'Todas',
+    historyTitle: 'Gastos Recientes',
+    loading: 'Cargando gastos...',
+    alertFields: '¡Por favor, complete la descripción y el valor correctamente!'
+  }
+};
 
 export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
+  const { systemLanguage } = useLanguage(); // 🌟 Obtendo o idioma ativo globalmente
+  const text = localTranslations[systemLanguage] || localTranslations['pt-BR'];
+
   const [isBusiness, setIsBusiness] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [description, setDescription] = useState('');
@@ -13,14 +84,20 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
   const [filtroAtivo, setFiltroAtivo] = useState('TODAS');
   const [loading, setLoading] = useState(true);
 
+  // 🌟 Função para formatar a moeda dinamicamente conforme o idioma
+  const formatCurrency = (amount) => {
+    if (systemLanguage === 'en-US') {
+      return Number(amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    } else if (systemLanguage === 'es-ES') {
+      return Number(amount).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+    }
+    return Number(amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
   const carregarDespesas = async () => {
     try {
       setLoading(true);
-
-      // Busca direto do novo endpoint otimizado que traz todas as despesas ordenadas do banco
       const despesas = await financeAPI.listarDespesas('TODAS');
-
-      // Salva no estado compartilhado que seus filtros locais usam
       setAllExpenses(despesas);
     } catch (err) {
       console.error('❌ Erro ao carregar despesas:', err);
@@ -33,7 +110,6 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
     carregarDespesas();
   }, [refreshTrigger]);
 
-  // Aplica o filtro localmente aos dados
   const filteredExpenses = allExpenses.filter(expense => {
     if (filtroAtivo === 'TODAS') return true;
     if (filtroAtivo === 'STUDIO') return expense.ehProfissional === true;
@@ -53,7 +129,7 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
     try {
       const novoValor = parseFloat(value.replace(',', '.'));
       if (!description || isNaN(novoValor)) {
-        alert('Por favor, preencha a descrição e o valor corretamente!');
+        alert(text.alertFields);
         return;
       }
 
@@ -80,19 +156,19 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
     <div className="pb-24 px-5">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-primary">Segregação Financeira</h2>
-        <p className="text-gray-600 text-sm">Acompanhe suas despesas</p>
+        <h2 className="text-primary">{text.title}</h2>
+        <p className="text-gray-600 text-sm">{text.subtitle}</p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-primary rounded-xl p-4 shadow-lg text-white">
-          <p className="text-purple-200 text-sm mb-1">Total Empresarial</p>
-          <p className="text-2xl">R$ {businessTotal.toLocaleString()}</p>
+          <p className="text-purple-200 text-sm mb-1">{text.totalBusiness}</p>
+          <p className="text-2xl">{formatCurrency(businessTotal)}</p>
         </div>
         <div className="bg-accent rounded-xl p-4 shadow-lg text-white">
-          <p className="text-pink-100 text-sm mb-1">Total Pessoal</p>
-          <p className="text-2xl">R$ {personalTotal.toLocaleString()}</p>
+          <p className="text-pink-100 text-sm mb-1">{text.totalPersonal}</p>
+          <p className="text-2xl">{formatCurrency(personalTotal)}</p>
         </div>
       </div>
 
@@ -103,32 +179,32 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
           className="w-full bg-white rounded-xl p-4 shadow-md flex items-center justify-center gap-2 mb-6 text-primary hover:shadow-lg transition-shadow"
         >
           <Plus size={20} />
-          <span>Adicionar Nova Despesa</span>
+          <span>{text.btnAddExpense}</span>
         </button>
       )}
 
       {/* Expense Form */}
       {showForm && (
         <div className="bg-white rounded-xl p-5 shadow-md mb-6">
-          <h3 className="text-gray-800 mb-4">Nova Despesa</h3>
+          <h3 className="text-gray-800 mb-4">{text.formTitle}</h3>
 
           {/* Toggle Switch */}
           <div className="mb-4">
-            <label className="text-sm text-gray-600 mb-2 block">Tipo de Despesa</label>
+            <label className="text-sm text-gray-600 mb-2 block">{text.formType}</label>
             <div className="flex items-center gap-3 bg-gray-100 rounded-xl p-1">
               <button
                 onClick={() => setIsBusiness(true)}
                 className={`flex-1 py-2 rounded-lg transition-all ${isBusiness ? 'bg-primary text-white shadow-md' : 'text-gray-600'
                   }`}
               >
-                Empresarial
+                {text.typeBusiness}
               </button>
               <button
                 onClick={() => setIsBusiness(false)}
                 className={`flex-1 py-2 rounded-lg transition-all ${!isBusiness ? 'bg-accent text-white shadow-md' : 'text-gray-600'
                   }`}
               >
-                Pessoal
+                {text.typePersonal}
               </button>
             </div>
           </div>
@@ -136,18 +212,18 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
           {/* Form Fields */}
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-gray-600 mb-2 block">Descrição</label>
+              <label className="text-sm text-gray-600 mb-2 block">{text.labelDesc}</label>
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Digite a descrição"
+                placeholder={text.placeholderDesc}
                 className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-2 block">Valor</label>
+              <label className="text-sm text-gray-600 mb-2 block">{text.labelValue}</label>
               <div className="relative">
                 <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -161,7 +237,7 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-2 block">Data</label>
+              <label className="text-sm text-gray-600 mb-2 block">{text.labelDate}</label>
               <div className="relative">
                 <CalendarIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -180,13 +256,13 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
               onClick={() => setShowForm(false)}
               className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
             >
-              Cancelar
+              {text.btnCancel}
             </button>
             <button
               onClick={handleAddExpense}
               className="flex-1 py-3 bg-accent text-white rounded-xl hover:shadow-lg transition-shadow"
             >
-              Salvar
+              {text.btnSave}
             </button>
           </div>
         </div>
@@ -203,18 +279,18 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
-            {tipo === 'TODAS' && 'Todas'}
-            {tipo === 'STUDIO' && 'Empresarial'}
-            {tipo === 'PESSOAL' && 'Pessoal'}
+            {tipo === 'TODAS' && text.filterAll}
+            {tipo === 'STUDIO' && text.typeBusiness}
+            {tipo === 'PESSOAL' && text.typePersonal}
           </button>
         ))}
       </div>
 
       {/* Expense History */}
       <div>
-        <h3 className="text-gray-800 mb-3">Despesas Recentes</h3>
+        <h3 className="text-gray-800 mb-3">{text.historyTitle}</h3>
         {loading ? (
-          <div className="text-center py-10 text-gray-500">Carregando despesas...</div>
+          <div className="text-center py-10 text-gray-500">{text.loading}</div>
         ) : (
           <div className="space-y-3">
             {filteredExpenses.map((expense) => (
@@ -226,7 +302,7 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
                   </div>
                   <div className="text-right">
                     <p className="text-gray-800">
-                      R$ {expense.valor.toFixed(2)}
+                      {formatCurrency(expense.valor)}
                     </p>
                     <span
                       className={`inline-block px-2 py-1 rounded-full text-xs mt-1 ${expense.ehProfissional
@@ -234,7 +310,7 @@ export function ExpensesScreen({ onTransactionChange, refreshTrigger = 0 }) {
                         : 'bg-pink-100 text-accent'
                         }`}
                     >
-                      {expense.ehProfissional ? 'Empresarial' : 'Pessoal'}
+                      {expense.ehProfProfissional ? text.typeBusiness : text.typePersonal}
                     </span>
                   </div>
                 </div>

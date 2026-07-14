@@ -1,12 +1,12 @@
 import React from 'react';
 import { Calendar, Clock, DollarSign, Users, Plus, Phone, Settings, MapPin, ChevronRight } from 'lucide-react';
 
-export function AgendaTab({ 
-  todayAppointments, 
-  stats, 
+export function AgendaTab({
+  todayAppointments,
+  stats,
   loading,
   error,
-  openAppointmentDetails, 
+  openAppointmentDetails,
   openNewAppointmentModal,
   onServiceCatalogClick,
   onAutomationClick,
@@ -68,14 +68,14 @@ export function AgendaTab({
 
       {/* Desktop: Two Column Layout */}
       <div className="lg:grid lg:grid-cols-3 lg:gap-6">
-        
+
         {/* Today's Appointments Section */}
         <div className="mb-6 lg:col-span-2 lg:mb-0">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <h3 className="text-gray-800">Agenda de Hoje</h3>
               {todayAppointments.length > 0 && (
-                <button 
+                <button
                   onClick={onVerProximosAgendamentos}
                   className="text-xs text-primary font-medium flex items-center hover:underline ml-2"
                 >
@@ -110,45 +110,86 @@ export function AgendaTab({
           {!loading && !error && (
             todayAppointments.length > 0 ? (
               <div className="space-y-3">
-                {todayAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    onClick={() => openAppointmentDetails(appointment)}
-                    className="bg-white rounded-xl p-4 lg:p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 lg:w-14 lg:h-14 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <Clock className="text-primary" size={20} />
-                        </div>
-                        <div>
-                          <p className="text-primary font-medium lg:text-lg">{appointment.client}</p>
-                          <p className="text-gray-600 text-sm lg:text-base">{appointment.service}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-gray-800 font-medium lg:text-lg">{appointment.time}</p>
-                        <p className="text-gray-500 text-xs lg:text-sm">{appointment.duration}</p>
-                      </div>
-                    </div>
+                {todayAppointments.map((appointment, index) => {
+                  // 1. Identificadores únicos robustos
+                  const idUnico = appointment.idAgendamento || appointment.id || index;
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-gray-600 text-sm">
-                        <Phone size={14} />
-                        <span>{appointment.phone}</span>
+                  // 2. Garante o Nome do Cliente usando a normalização do HomeScreen ou fallbacks diretos
+                  const nomeCliente = appointment.cliente?.nome || appointment.nomeCliente || appointment.nome_cliente || appointment.client || 'Cliente não identificado';
+
+                  // 3. CORREÇÃO DO SERVIÇO: Varre o array de serviços normalizado ou propriedades achatadas (como nomeServico)
+                  const nomeServico = appointment.servicos?.[0]?.nome || appointment.servicos?.[0]?.nomeServico || appointment.nomeServico || appointment.service || 'Serviço não especificado';
+
+                  // 4. Contato do cliente
+                  const telefoneCliente = appointment.cliente?.telefone || appointment.cliente?.whatsapp || appointment.phone || appointment.whatsapp || '(—) —';
+
+                  // 5. Status com suporte a CANCELADO (como visto no seu print)
+                  const statusAtual = String(appointment.status || appointment.statusAgendamento || '').toUpperCase();
+
+                  // 6. CORREÇÃO DO VALOR: Puxa o totalFinal já tratado pelo parseNumber do HomeScreen ou faz o fallback local definitivo
+                  const valorFinal = Number(appointment.valorTotalFinal || appointment.totalFinal || appointment.subtotalServicos || appointment.price || 0);
+
+                  // 7. Extrai o horário (HH:mm) do campo dataHoraInicio de forma limpa
+                  let horarioExibicao = appointment.time || '—:—';
+                  if (appointment.dataHoraInicio && appointment.dataHoraInicio.includes('T')) {
+                    const partesHora = appointment.dataHoraInicio.split('T')[1];
+                    if (partesHora) {
+                      horarioExibicao = partesHora.substring(0, 5);
+                    }
+                  }
+
+                  // Duração estimada do serviço
+                  const duracaoExibicao = appointment.duration ||
+                    (appointment.servicos?.[0]?.tempoEstimado ? `${appointment.servicos[0].tempoEstimado} min` : '');
+
+                  return (
+                    <div
+                      key={idUnico}
+                      onClick={() => openAppointmentDetails(appointment)}
+                      className="bg-white rounded-xl p-4 lg:p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 lg:w-14 lg:h-14 bg-primary/10 rounded-lg flex items-center justify-center">
+                            <Clock className="text-primary" size={20} />
+                          </div>
+                          <div>
+                            <p className="text-primary font-medium lg:text-lg">{nomeCliente}</p>
+                            <p className="text-gray-600 text-sm lg:text-base">{nomeServico}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-gray-800 font-medium lg:text-lg">{horarioExibicao}</p>
+                          {/* Exibição do valor final formatado */}
+                          <p className="text-green-600 font-semibold text-sm lg:text-base">
+                            R$ {valorFinal.toFixed(2).replace('.', ',')}
+                          </p>
+                          {duracaoExibicao && (
+                            <p className="text-gray-500 text-xs lg:text-sm">{duracaoExibicao}</p>
+                          )}
+                        </div>
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs lg:text-sm ${
-                          appointment.status === 'confirmed' || appointment.status === 'Confirmado'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}
-                      >
-                        {appointment.status === 'confirmed' || appointment.status === 'Confirmado' ? 'Confirmado' : 'Pendente'}
-                      </span>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-gray-600 text-sm">
+                          <Phone size={14} />
+                          <span>{telefoneCliente}</span>
+                        </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs lg:text-sm font-medium ${statusAtual === 'CONFIRMED' || statusAtual === 'CONFIRMADO'
+                              ? 'bg-green-100 text-green-700'
+                              : statusAtual === 'CANCELED' || statusAtual === 'CANCELADO'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}
+                        >
+                          {statusAtual === 'CONFIRMED' || statusAtual === 'CONFIRMADO' ? 'Confirmado' :
+                            statusAtual === 'CANCELED' || statusAtual === 'CANCELADO' ? 'Cancelado' : 'Pendente'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               /* Interface quando não houver agendamentos restantes ou marcados para hoje */

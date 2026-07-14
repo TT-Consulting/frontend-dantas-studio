@@ -2,50 +2,41 @@ import { useState, useEffect } from 'react';
 import {
   listarClientes,
   listarServicosAtivos,
-  listarHorarioComercial,
   criarAgendamento,
   listarAgendamentos,
-  salvarCliente,
-  atualizarCliente,
-  alternarStatusCliente
+  buscarAgendamentosPorPeriodo,
+  buscarAgendamentoPorId 
 } from '../../api';
-import { X, Phone, Mail, MapPin, Calendar, User, Edit2 } from 'lucide-react';
+import { X, Phone } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext'; // 🌟 Importando o hook de idioma
 
 // Subcomponentes fiéis ao modelo antigo
 import { AgendaTab } from './AgendaTab';
-import { ClientsTab } from './ClientsTab';
+import { ClientsScreen } from './ClientsScreen';
 import { NewAppointmentModal } from './NewAppointmentModal';
 
 export function HomeScreen({
   onServiceCatalogClick,
   onAutomationClick,
   onProcessFlowClick,
-  onSettingsClick,
-  onLogout,
   onVerProximosAgendamentos
 }) {
+  const { t, systemLanguage } = useLanguage(); // 🌟 Consumindo as traduções e o idioma ativo
+
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [clientsError, setClientsError] = useState(null);
   const [services, setServices] = useState([]);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [servicesError, setServicesError] = useState(null);
-  const [businessHours, setBusinessHours] = useState([]);
 
-  // Novos estados para integração real da agenda
   const [appointments, setAppointments] = useState([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [appointmentsError, setAppointmentsError] = useState(null);
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('agenda');
   const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [editData, setEditData] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [showClientInfoModal, setShowClientInfoModal] = useState(false);
 
   const [newAppointment, setNewAppointment] = useState({
     service: '',
@@ -53,24 +44,6 @@ export function HomeScreen({
     date: '',
     time: '',
     clientId: '',
-  });
-
-  // Estados para gerenciar clientes
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState(null);
-  const [formData, setFormData] = useState({
-    nome: '',
-    whatsapp: '',
-    email: '',
-    dataNascimento: '',
-    genero: '',
-    alergias: '',
-    condicoesSaude: '',
-    possuiUnhasEncravadas: false,
-    sensibilidadeExcessiva: false,
-    possuiMicoseFungos: false,
-    localidade: '',
-    endereco: ''
   });
 
   // Utility functions
@@ -85,56 +58,73 @@ export function HomeScreen({
     return phone;
   };
 
-  const calculateAge = (birthDate) => {
-    if (!birthDate) return 'Não informado';
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return `${age} anos`;
-  };
-
   const mapClientFromApi = (client) => ({
     id: String(client.idCliente ?? client.id_cliente ?? client.id),
-    idCliente: client.idCliente ?? client.id_cliente ?? client.id, // Keep numeric ID for backend
-    name: client.nomeCliente ?? client.nome_cliente ?? client.nome ?? 'Cliente Sem Nome',
+    idCliente: client.idCliente ?? client.id_cliente ?? client.id,
+    name: client.nomeCliente ?? client.nome_cliente ?? client.nome ?? client.name ?? 'Cliente Sem Nome',
     phone: client.whatsapp ?? client.telefone ?? '',
-    email: client.email ?? '',
-    status: client.isAtivo ? 'active' : 'inactive',
-    lastVisit: client.ultimaVisita ?? client.ultima_visita ?? '—',
-    totalVisits: client.totalVisitas ?? client.total_visitas ?? 0,
-    localidade: client.localidade ?? client.cidade ?? '',
-    cep: client.cep ?? '',
-    logradouro: client.logradouro ?? client.endereco ?? '',
-    bairro: client.bairro ?? '',
-    numero: client.numero ?? '',
-    endereco: client.endereco ?? client.logradouro ?? '',
-    dataNascimento: client.dataNascimento ?? '',
-    genero: client.genero ?? '',
-    alergias: client.alergias ?? '',
-    condicoesSaude: client.condicoesSaude ?? '',
-    observacoes: client.observacoes ?? '',
-    isAtivo: client.isAtivo ?? true,
-    possuiUnhasEncravadas: client.possuiUnhasEncravadas ?? false,
-    sensibilidadeExcessiva: client.sensibilidadeExcessiva ?? false,
-    possuiMicoseFungos: client.possuiMicoseFungos ?? false
   });
 
-  // Efeito para carregar os agendamentos da API em tempo real
+  const mapAppointmentFromApi = (appointment) => {
+    const parseNumber = (value) => {
+      if (value === null || value === undefined || value === '') return 0;
+      if (typeof value === 'number') return value;
+
+      const raw = String(value).replace('R$', '').trim();
+      const normalized = raw.includes(',')
+        ? raw.replace(/\./g, '').replace(',', '.')
+        : raw;
+
+      return parseFloat(normalized) || 0;
+    };
+
+    const clientName = appointment?.cliente?.nome ?? appointment?.nomeCliente ?? appointment?.nome_cliente ?? appointment?.client ?? 'Cliente não identificado';
+    const clientPhone = appointment?.cliente?.whatsapp ?? appointment?.cliente?.telefone ?? appointment?.whatsapp ?? appointment?.telefone ?? appointment?.phone ?? '';
+    const statusNormalizado = appointment?.status ?? appointment?.statusAgendamento ?? appointment?.situacao ?? 'PENDENTE';
+    const taxaDeslocamento = parseNumber(appointment?.taxaDeslocamento);
+
+    const servicos = Array.isArray(appointment?.servicos)
+      ? appointment.servicos.map((service) => ({
+        ...service,
+        nome: service?.nome ?? service?.nomeServico ?? 'Serviço não especificado',
+        preco: parseNumber(service?.preco ?? service?.precoBase ?? service?.valor),
+      }))
+      : [];
+
+    const subtotalServicos = parseNumber(appointment?.subtotalServicos) || servicos.reduce((acc, service) => acc + parseNumber(service?.preco), 0);
+    const totalFinal = appointment?.totalFinal !== undefined && appointment?.totalFinal !== null
+      ? parseNumber(appointment.totalFinal)
+      : (appointment?.valorTotalFinal !== undefined && appointment?.valorTotalFinal !== null)
+        ? parseNumber(appointment.valorTotalFinal)
+        : (subtotalServicos + taxaDeslocamento);
+
+    return {
+      ...appointment,
+      cliente: {
+        ...(appointment?.cliente || {}),
+        idCliente: appointment?.cliente?.idCliente ?? appointment?.cliente?.id ?? appointment?.idCliente ?? appointment?.id_cliente,
+        nome: appointment?.cliente?.nome ?? clientName,
+        whatsapp: appointment?.cliente?.whatsapp ?? clientPhone,
+        telefone: appointment?.cliente?.telefone ?? clientPhone,
+      },
+      servicos,
+      nomeCliente: appointment?.nomeCliente ?? clientName,
+      status: statusNormalizado,
+      statusAgendamento: appointment?.statusAgendamento ?? statusNormalizado,
+      subtotalServicos,
+      totalFinal,
+      taxaDeslocamento,
+      phone: appointment?.phone ?? clientPhone,
+    };
+  };
+
   useEffect(() => {
     const fetchAppointments = async () => {
       setAppointmentsLoading(true);
       setAppointmentsError(null);
       try {
-        // Se sua API já possuir o listarAgendamentos implementado, descomente a linha abaixo:
-        // const data = await listarAgendamentos();
-
-        // Exemplo de estrutura esperado que sua API vai retornar (substitua pelo retorno real)
-        const data = [];
-        setAppointments(data);
+        const data = await buscarAgendamentosPorPeriodo();
+        setAppointments(Array.isArray(data) ? data.map(mapAppointmentFromApi) : []);
       } catch (err) {
         setAppointmentsError('Erro ao carregar agendamentos em tempo real.');
         console.error(err);
@@ -154,7 +144,7 @@ export function HomeScreen({
       try {
         const data = await listarServicosAtivos();
         setServices(data);
-      } catch (err) {
+      } catch {
         setServicesError('Erro ao carregar catálogo.');
       } finally {
         setServicesLoading(false);
@@ -168,8 +158,8 @@ export function HomeScreen({
       setClientsLoading(true);
       setClientsError(null);
       try {
-        const data = await listarClientes(searchQuery);
-        setClients(data.map(mapClientFromApi));
+        const data = await listarClientes();
+        setClients(Array.isArray(data) ? data.map(mapClientFromApi) : []);
       } catch (err) {
         setClientsError('Erro ao carregar lista de clientes.');
         console.error(err);
@@ -178,33 +168,30 @@ export function HomeScreen({
       }
     };
     fetchClients();
-  }, [searchQuery]);
-
-  useEffect(() => {
-    const fetchBusinessHours = async () => {
-      try {
-        const data = await listarHorarioComercial();
-        setBusinessHours(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchBusinessHours();
   }, []);
 
-  // Filtragem em tempo real baseada na data de hoje do sistema
-  const todayStr = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
+
   const todayAppointments = appointments.filter(app => {
-    // Altere o campo 'date' conforme a propriedade que vem do seu backend (ex: app.dataHoraInicio)
-    const appDate = app.date || app.dataHoraInicio?.split('T')[0];
-    return appDate === todayStr;
+    let appDate = app.date || (app.dataHoraInicio && app.dataHoraInicio.includes('T') ? app.dataHoraInicio.split('T')[0] : app.dataHoraInicio);
+    if (!appDate) return false;
+    return String(appDate).trim() === todayStr;
   });
 
-  // Estatísticas baseadas nos dados dinâmicos da API
   const stats = {
     today: todayAppointments.length,
-    pending: todayAppointments.filter(a => a.status === 'pending' || a.status === 'Pendente').length,
-    revenue: todayAppointments.reduce((acc, curr) => acc + (parseFloat(curr.price?.replace('R$', '').replace(',', '.')) || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+    pending: todayAppointments.filter(a => {
+      const statusUpper = String(a.status || a.statusAgendamento || '').toUpperCase();
+      return statusUpper === 'PENDING' || statusUpper === 'PENDENTE';
+    }).length,
+    revenue: todayAppointments.reduce((acc, curr) => {
+      const val = curr.totalFinal ?? curr.valorTotalFinal ?? curr.subtotalServicos ?? 0;
+      return acc + (typeof val === 'number' ? val : parseFloat(val) || 0);
+    }, 0).toLocaleString(systemLanguage, { style: 'currency', currency: systemLanguage === 'en-US' ? 'USD' : 'BRL' }),
     clients: clients.length
   };
 
@@ -212,144 +199,50 @@ export function HomeScreen({
     setNewAppointment(prev => ({ ...prev, [field]: value }));
   };
 
-const handleSaveNewAppointment = async () => {
-  // 1. Força a conversão garantindo que estamos lendo a propriedade 'service' preenchida pelo modal
-  const serviceId = parseInt(newAppointment.service, 10);
-  const clientId = parseInt(newAppointment.clientId, 10);
+  const handleSaveNewAppointment = async () => {
+    const serviceId = parseInt(newAppointment.service, 10);
+    const clientId = parseInt(newAppointment.clientId, 10);
 
-  // 2. Validações preventivas robustas no front-end
-  if (!newAppointment.service || isNaN(serviceId)) {
-    alert('Por favor, selecione um serviço válido.');
-    return;
-  }
-  if (!newAppointment.clientId || isNaN(clientId)) {
-    alert('Por favor, selecione uma cliente.');
-    return;
-  }
-  if (!newAppointment.date || !newAppointment.time) {
-    alert('Por favor, preencha a data e o horário.');
-    return;
-  }
+    if (!newAppointment.service || isNaN(serviceId)) {
+      alert('Por favor, selecione um serviço válido.');
+      return;
+    }
+    if (!newAppointment.clientId || isNaN(clientId)) {
+      alert('Por favor, selecione uma cliente.');
+      return;
+    }
+    if (!newAppointment.date || !newAppointment.time) {
+      alert('Por favor, preencha a data e o horário.');
+      return;
+    }
 
-  // 3. Monta o DTO exatamente como o Kotlin espera receber (like BookingScreen)
-  const agendamentoDTO = {
-    dataHoraInicio: `${newAppointment.date}T${newAppointment.time}:00`,
-    taxaDeslocamento: newAppointment.location === 'Domicilio' ? 15.0 : 0.0,
-    tipoLocal: newAppointment.location === 'Domicilio' ? 'DOMICILIO' : 'STUDIO',
-    cepAtendimento: newAppointment.location === 'Domicilio' ? '' : null,
-    isManual: true, // Mark as manual appointment since it's from HomeScreen
-    servicos: [{ idServico: serviceId }], // Send as array of objects with idServico
-    cliente: { idCliente: clientId }
-  };
+    const agendamentoDTO = {
+      dataHoraInicio: `${newAppointment.date}T${newAppointment.time}:00`,
+      taxaDeslocamento: newAppointment.location === 'Domicilio' ? 15.0 : 0.0,
+      tipoLocal: newAppointment.location === 'Domicilio' ? 'DOMICILIO' : 'STUDIO',
+      cepAtendimento: newAppointment.location === 'Domicilio' ? '' : null,
+      isManual: true,
+      servicos: [{ idServico: serviceId }],
+      cliente: { idCliente: clientId }
+    };
 
-  // Log preventivo para checar no console do navegador antes de disparar a requisição
-  console.log("📤 Enviando DTO de Agendamento:", agendamentoDTO);
-
-  try {
-    const result = await criarAgendamento(agendamentoDTO);
-    console.log("✅ Agendamento criado com sucesso!", result);
-    alert('Agendamento realizado com sucesso!');
-    setShowNewAppointmentModal(false);
-
-    // Limpa o estado do formulário para o próximo uso
-    setNewAppointment({
-      service: '',
-      location: 'Studio',
-      date: '',
-      time: '',
-      clientId: '',
-    });
-
-    // Força a atualização da lista/aba
-    setActiveTab('agenda');
-  } catch (err) {
-    console.error("❌ Erro ao salvar agendamento:", err);
-    // Exibe a mensagem exata retornada pelo backend se houver
-    const msgErro = err.response?.data?.mensagem || 'Erro ao realizar o agendamento.';
-    alert(msgErro);
-  }
-};
-
-  const openClientDetails = (client, triggerEdit = false) => {
-    if (triggerEdit) {
-      setEditingClient(client);
-      setFormData({
-        nome: client.name,
-        whatsapp: client.phone,
-        email: client.email,
-        dataNascimento: client.dataNascimento || '',
-        genero: client.genero || '',
-        alergias: client.alergias || '',
-        condicoesSaude: client.condicoesSaude || '',
-        possuiUnhasEncravadas: client.possuiUnhasEncravadas,
-        sensibilidadeExcessiva: client.sensibilidadeExcessiva,
-        possuiMicoseFungos: client.possuiMicoseFungos,
-        localidade: client.localidade || '',
-        endereco: client.endereco || ''
+    try {
+      await criarAgendamento(agendamentoDTO);
+      alert('Agendamento realizado com sucesso!');
+      setShowNewAppointmentModal(false);
+      setNewAppointment({
+        service: '',
+        location: 'Studio',
+        date: '',
+        time: '',
+        clientId: '',
       });
-      setShowClientInfoModal(false);
-      setIsModalOpen(true);
-    } else {
-      setSelectedClient(client);
-      setShowClientInfoModal(true);
-    }
-  };
-
-  const handleNewClientClick = () => {
-    setEditingClient(null);
-    setFormData({
-      nome: '',
-      whatsapp: '',
-      email: '',
-      dataNascimento: '',
-      genero: '',
-      alergias: '',
-      condicoesSaude: '',
-      possuiUnhasEncravadas: false,
-      sensibilidadeExcessiva: false,
-      possuiMicoseFungos: false,
-      localidade: '',
-      endereco: ''
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSubmitForm = async () => {
-    try {
-      if (editingClient) {
-        await atualizarCliente(editingClient.idCliente, formData);
-      } else {
-        await salvarCliente(formData);
-      }
-      await carregarClientes(); // Recarrega a lista
-      setIsModalOpen(false);
+      const updatedData = await listarAgendamentos();
+      setAppointments(Array.isArray(updatedData) ? updatedData.map(mapAppointmentFromApi) : []);
     } catch (err) {
-      console.error("Erro ao salvar cliente", err);
-    }
-  };
-
-  const handleToggleStatus = async (client, e) => {
-    e.stopPropagation();
-    try {
-      await alternarStatusCliente(client.idCliente, !client.isAtivo);
-      await carregarClientes(); // Recarrega a lista
-    } catch (err) {
-      console.error("Erro ao alterar status do cliente", err);
-    }
-  };
-
-  // Função para recarregar clientes
-  const carregarClientes = async () => {
-    setClientsLoading(true);
-    setClientsError(null);
-    try {
-      const data = await listarClientes(searchQuery);
-      setClients(data.map(mapClientFromApi));
-    } catch (err) {
-      setClientsError('Erro ao carregar lista de clientes.');
-      console.error(err);
-    } finally {
-      setClientsLoading(false);
+      console.error("❌ Erro ao salvar agendamento:", err);
+      const msgErro = err.response?.data?.mensagem || 'Erro ao realizar o agendamento.';
+      alert(msgErro);
     }
   };
 
@@ -358,9 +251,11 @@ const handleSaveNewAppointment = async () => {
       {/* Header Fiel */}
       <div className="mb-6">
         <div className="mb-4">
-          <h2 className="text-primary font-bold text-2xl">Bem-vinda, Annika!</h2>
+          <h2 className="text-primary font-bold text-2xl">
+            {systemLanguage === 'en-US' ? 'Welcome, Annika!' : systemLanguage === 'es-ES' ? '¡Bienvenida, Annika!' : 'Bem-vinda, Annika!'}
+          </h2>
           <p className="text-gray-600 text-sm capitalize">
-            {new Date().toLocaleDateString('pt-BR', {
+            {new Date().toLocaleDateString(systemLanguage, {
               weekday: 'long',
               day: 'numeric',
               month: 'long'
@@ -373,20 +268,20 @@ const handleSaveNewAppointment = async () => {
           <button
             onClick={() => setActiveTab('agenda')}
             className={`flex-1 py-3 rounded-xl font-medium transition-all text-center ${activeTab === 'agenda'
-                ? 'bg-primary text-white shadow-md'
-                : 'bg-white text-gray-600 border border-gray-200'
+              ? 'bg-primary text-white shadow-md'
+              : 'bg-white text-gray-600 border border-gray-200'
               }`}
           >
-            Agenda
+            {t('navCalendar')}
           </button>
           <button
             onClick={() => setActiveTab('clients')}
             className={`flex-1 py-3 rounded-xl font-medium transition-all text-center ${activeTab === 'clients'
-                ? 'bg-primary text-white shadow-md'
-                : 'bg-white text-gray-600 border border-gray-200'
+              ? 'bg-primary text-white shadow-md'
+              : 'bg-white text-gray-600 border border-gray-200'
               }`}
           >
-            Clientes
+            {t('navClients')}
           </button>
         </div>
       </div>
@@ -397,180 +292,24 @@ const handleSaveNewAppointment = async () => {
           stats={stats}
           loading={appointmentsLoading}
           error={appointmentsError}
-          openAppointmentDetails={setSelectedAppointment}
+          openAppointmentDetails={async (appointment) => {
+            try {
+              const idReal = appointment.idAgendamento || appointment.id;
+              if (!idReal) return;
+              const agendamentoCompleto = await buscarAgendamentoPorId(idReal);
+              setSelectedAppointment(mapAppointmentFromApi(agendamentoCompleto));
+            } catch (err) {
+              console.error("Erro ao carregar detalhes do agendamento:", err);
+            }
+          }}
           openNewAppointmentModal={() => setShowNewAppointmentModal(true)}
           onServiceCatalogClick={onServiceCatalogClick}
           onAutomationClick={onAutomationClick}
           onProcessFlowClick={onProcessFlowClick}
-          onVerProximosAgendamentos={onVerProximosAgendamentos || (() => alert('Navegar para próximos agendamentos...'))}
+          onVerProximosAgendamentos={onVerProximosAgendamentos}
         />
       ) : (
-        <ClientsTab
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          stats={stats}
-          filteredClients={clients}
-          openClientDetails={openClientDetails}
-          handleNewClientClick={handleNewClientClick}
-          handleToggleStatus={handleToggleStatus}
-          clientsLoading={clientsLoading}
-          clientsError={clientsError}
-        />
-      )}
-
-      {/* Modal para adicionar/editar clientes */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center p-0 md:p-4 transition-opacity animate-fadeIn">
-          <div className="absolute inset-0" onClick={() => setIsModalOpen(false)}></div>
-          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md max-h-[85vh] md:max-h-[90vh] overflow-y-auto z-10 shadow-2xl relative flex flex-col animate-slideUp">
-            <div className="sticky top-0 bg-white px-5 py-4 shrink-0 z-10 shadow-sm border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-800">{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="px-5 py-4 space-y-4 overflow-y-auto">
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Nome</label>
-                <input
-                  type="text"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Nome completo"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">WhatsApp</label>
-                <input
-                  type="text"
-                  value={formData.whatsapp}
-                  onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="email@exemplo.com"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Localidade</label>
-                <input
-                  type="text"
-                  value={formData.localidade}
-                  onChange={(e) => setFormData({ ...formData, localidade: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Cidade, Bairro"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Endereço</label>
-                <input
-                  type="text"
-                  value={formData.endereco}
-                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Rua, Número"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Data de Nascimento</label>
-                <input
-                  type="date"
-                  value={formData.dataNascimento}
-                  onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Gênero</label>
-                <select
-                  value={formData.genero}
-                  onChange={(e) => setFormData({ ...formData, genero: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                >
-                  <option value="">Selecione</option>
-                  <option value="Feminino">Feminino</option>
-                  <option value="Masculino">Masculino</option>
-                  <option value="Outro">Outro</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Alergias</label>
-                <textarea
-                  value={formData.alergias}
-                  onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Descreva alergias, se houver"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Condições de Saúde</label>
-                <textarea
-                  value={formData.condicoesSaude}
-                  onChange={(e) => setFormData({ ...formData, condicoesSaude: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary"
-                  placeholder="Descreva condições de saúde relevantes"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-gray-700 block">Observações de Saúde</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.possuiUnhasEncravadas}
-                    onChange={(e) => setFormData({ ...formData, possuiUnhasEncravadas: e.target.checked })}
-                    className="w-5 h-5 text-primary"
-                  />
-                  <span className="text-gray-700 text-sm">Tendência a unhas encravadas</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.sensibilidadeExcessiva}
-                    onChange={(e) => setFormData({ ...formData, sensibilidadeExcessiva: e.target.checked })}
-                    className="w-5 h-5 text-primary"
-                  />
-                  <span className="text-gray-700 text-sm">Sensibilidade cutânea excessiva</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.possuiMicoseFungos}
-                    onChange={(e) => setFormData({ ...formData, possuiMicoseFungos: e.target.checked })}
-                    className="w-5 h-5 text-primary"
-                  />
-                  <span className="text-gray-700 text-sm">Histórico ou presença de micose/fungos</span>
-                </div>
-              </div>
-            </div>
-            <div className="px-5 py-4 border-t border-gray-100">
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSubmitForm}
-                  className="flex-1 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90"
-                >
-                  {editingClient ? 'Salvar Alterações' : 'Adicionar Cliente'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ClientsScreen />
       )}
 
       <NewAppointmentModal
@@ -587,175 +326,120 @@ const handleSaveNewAppointment = async () => {
         handleSaveNewAppointment={handleSaveNewAppointment}
       />
 
-      {/* Modal para ver informações do cliente */}
-      {showClientInfoModal && selectedClient && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center p-0 md:p-4 transition-opacity animate-fadeIn">
-          <div className="absolute inset-0" onClick={() => setShowClientInfoModal(false)}></div>
-          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md max-h-[85vh] md:max-h-[90vh] overflow-y-auto z-10 shadow-2xl relative flex flex-col animate-slideUp">
-            <div className="sticky top-0 bg-white px-5 py-4 shrink-0 z-10 shadow-sm border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-800">Informações do Cliente</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => openClientDetails(selectedClient, true)}
-                  className="p-1.5 hover:bg-gray-100 rounded-full text-primary"
-                >
-                  <Edit2 size={20} />
-                </button>
-                <button onClick={() => setShowClientInfoModal(false)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600">
-                  <X size={20} />
-                </button>
+      {/* Modal de Detalhes Completo do Agendamento */}
+      {selectedAppointment && selectedAppointment.cliente && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity animate-fadeIn">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-slideUp">
+            <div className="p-5 bg-linear-to-r from-primary to-purple-700 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold">
+                  {systemLanguage === 'en-US' ? 'Appointment Details' : systemLanguage === 'es-ES' ? 'Detalles del Turno' : 'Detalhes do Agendamento'}
+                </h3>
+                <p className="text-purple-100 text-xs">ID: #{selectedAppointment.idAgendamento || selectedAppointment.id}</p>
               </div>
+              <button
+                onClick={() => setSelectedAppointment(null)}
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <div className="px-5 py-6 space-y-6 overflow-y-auto">
-              {/* Nome e Avatar */}
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <span className="text-primary font-bold text-2xl">
-                    {selectedClient.name ? selectedClient.name.charAt(0) : 'U'}
-                  </span>
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-gray-800">{selectedClient.name}</h4>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mt-1 ${selectedClient.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                    {selectedClient.status === 'active' ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-xs font-bold text-gray-400 uppercase mb-1">
+                  {systemLanguage === 'en-US' ? 'Client' : systemLanguage === 'es-ES' ? 'Cliente' : 'Cliente'}
+                </p>
+                <p className="text-gray-800 font-semibold text-base">{selectedAppointment.cliente?.nome || selectedAppointment.nomeCliente || '—'}</p>
+                <p className="text-gray-600 text-sm flex items-center gap-1.5 mt-1">
+                  <Phone size={14} className="text-gray-400" />
+                  {formatPhoneNumber(selectedAppointment.cliente?.whatsapp || selectedAppointment.cliente?.telefone || selectedAppointment.phone)}
+                </p>
               </div>
 
-              {/* Dados Básicos */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Dados Básicos</h5>
-                
-                <div className="flex items-center gap-3">
-                  <User size={18} className="text-gray-400" />
-                  <span className="text-gray-700">
-                    Gênero: {selectedClient.genero || 'Não informado'}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <Calendar size={18} className="text-gray-400" />
-                  <span className="text-gray-700">
-                    Idade: {calculateAge(selectedClient.dataNascimento)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dados de Contato */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Contato</h5>
-                
-                <div className="flex items-center gap-3">
-                  <Phone size={18} className="text-gray-400" />
-                  <span className="text-gray-700">
-                    {formatPhoneNumber(selectedClient.phone)}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <Mail size={18} className="text-gray-400" />
-                  <span className="text-gray-700">
-                    {selectedClient.email || 'Não informado'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dados de Endereço */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Endereço</h5>
-                
-                {selectedClient.cep && (
-                  <div className="flex items-center gap-3">
-                    <MapPin size={18} className="text-gray-400" />
-                    <span className="text-gray-700">CEP: {selectedClient.cep}</span>
-                  </div>
-                )}
-                
-                {selectedClient.logradouro && (
-                  <div className="flex items-start gap-3">
-                    <MapPin size={18} className="text-gray-400 mt-0.5" />
-                    <span className="text-gray-700">
-                      {selectedClient.logradouro}
-                      {selectedClient.numero && `, ${selectedClient.numero}`}
-                    </span>
-                  </div>
-                )}
-                
-                {selectedClient.bairro && (
-                  <div className="flex items-center gap-3">
-                    <MapPin size={18} className="text-gray-400" />
-                    <span className="text-gray-700">Bairro: {selectedClient.bairro}</span>
-                  </div>
-                )}
-                
-                {selectedClient.localidade && (
-                  <div className="flex items-center gap-3">
-                    <MapPin size={18} className="text-gray-400" />
-                    <span className="text-gray-700">Localidade: {selectedClient.localidade}</span>
-                  </div>
+              <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100/50">
+                <p className="text-xs font-bold text-primary uppercase mb-2">
+                  {systemLanguage === 'en-US' ? 'Contracted Service' : systemLanguage === 'es-ES' ? 'Servicio Contratado' : 'Serviço Contratado'}
+                </p>
+                {selectedAppointment.servicos && selectedAppointment.servicos.length > 0 ? (
+                  selectedAppointment.servicos.map((serv, idx) => (
+                    <div key={idx} className="flex justify-between items-center py-1 border-b border-purple-100/30 last:border-0">
+                      <div>
+                        <p className="text-gray-800 font-medium text-sm">{serv.nome}</p>
+                        <p className="text-gray-500 text-xs">
+                          {serv.tempoEstimado || serv.duracao || 0} {systemLanguage === 'en-US' ? 'min duration' : 'min de duração'}
+                        </p>
+                      </div>
+                      <p className="text-gray-700 font-bold text-sm">
+                        {systemLanguage === 'en-US' ? `$ ${Number(serv.preco || 0).toFixed(2)}` : `R$ ${Number(serv.preco || 0).toFixed(2)}`}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">Nenhum serviço associado</p>
                 )}
               </div>
 
-              {/* Saúde */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Saúde</h5>
-                
-                {selectedClient.alergias && (
-                  <div className="bg-yellow-50 p-3 rounded-xl">
-                    <p className="text-xs font-semibold text-yellow-800 mb-1">Alergias</p>
-                    <p className="text-gray-700 text-sm">{selectedClient.alergias}</p>
-                  </div>
-                )}
-                
-                {selectedClient.condicoesSaude && (
-                  <div className="bg-blue-50 p-3 rounded-xl">
-                    <p className="text-xs font-semibold text-blue-800 mb-1">Restrições de Saúde</p>
-                    <p className="text-gray-700 text-sm">{selectedClient.condicoesSaude}</p>
-                  </div>
-                )}
-                
-                {selectedClient.observacoes && (
-                  <div className="bg-gray-50 p-3 rounded-xl">
-                    <p className="text-xs font-semibold text-gray-700 mb-1">Observações</p>
-                    <p className="text-gray-700 text-sm">{selectedClient.observacoes}</p>
-                  </div>
-                )}
-
-                {/* Observações de Saúde (Tags) */}
-                <div className="space-y-2">
-                  {selectedClient.possuiUnhasEncravadas && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">
-                      Unhas encravadas
-                    </span>
-                  )}
-                  {selectedClient.sensibilidadeExcessiva && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
-                      Sensibilidade excessiva
-                    </span>
-                  )}
-                  {selectedClient.possuiMicoseFungos && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                      Micose/fungos
-                    </span>
-                  )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <p className="text-xs font-bold text-gray-400 uppercase mb-1">
+                    {systemLanguage === 'en-US' ? 'Date' : systemLanguage === 'es-ES' ? 'Fecha' : 'Data'}
+                  </p>
+                  <p className="text-gray-700 font-semibold text-sm">
+                    {selectedAppointment.dataHoraInicio
+                      ? new Date(selectedAppointment.dataHoraInicio).toLocaleDateString(systemLanguage)
+                      : '—'}
+                  </p>
                 </div>
-              </div>
-
-              {/* Estatísticas */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-primary">{selectedClient.totalVisits}</p>
-                  <p className="text-sm text-gray-600">Visitas</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-xl text-center">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Última visita</p>
-                  <p className="text-xs text-gray-600">
-                    {selectedClient.lastVisit && selectedClient.lastVisit !== '—'
-                      ? new Date(selectedClient.lastVisit).toLocaleDateString('pt-BR')
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <p className="text-xs font-bold text-gray-400 uppercase mb-1">
+                    {systemLanguage === 'en-US' ? 'Time' : systemLanguage === 'es-ES' ? 'Hora' : 'Horário'}
+                  </p>
+                  <p className="text-gray-700 font-semibold text-sm">
+                    {selectedAppointment.dataHoraInicio
+                      ? selectedAppointment.dataHoraInicio.split('T')[1]?.substring(0, 5)
                       : '—'}
                   </p>
                 </div>
               </div>
+
+              <div className="pt-3 border-t border-dashed border-gray-200 space-y-2">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Subtotal:</span>
+                  <span>
+                    {systemLanguage === 'en-US' ? `$ ${Number(selectedAppointment.subtotalServicos || 0).toFixed(2)}` : `R$ ${Number(selectedAppointment.subtotalServicos || 0).toFixed(2)}`}
+                  </span>
+                </div>
+                {selectedAppointment.taxaDeslocamento > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>
+                      {systemLanguage === 'en-US' ? 'Additional Fee' : systemLanguage === 'es-ES' ? 'Tasa Adicional' : 'Taxa Adicional'} ({selectedAppointment.tipoLocal}):
+                    </span>
+                    <span>
+                      {systemLanguage === 'en-US' ? `$ ${Number(selectedAppointment.taxaDeslocamento).toFixed(2)}` : `R$ ${Number(selectedAppointment.taxaDeslocamento).toFixed(2)}`}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center text-gray-800 font-bold text-base pt-2 border-t border-gray-100">
+                  <span>
+                    {systemLanguage === 'en-US' ? 'Total Amount:' : systemLanguage === 'es-ES' ? 'Valor Total:' : 'Valor Total:'}
+                  </span>
+                  <span className="text-primary text-lg">
+                    {systemLanguage === 'en-US' 
+                      ? `$ ${Number(selectedAppointment.valorTotalFinal || selectedAppointment.totalFinal || 0).toFixed(2)}` 
+                      : `R$ ${Number(selectedAppointment.valorTotalFinal || selectedAppointment.totalFinal || 0).toFixed(2)}`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setSelectedAppointment(null)}
+                className="px-5 py-2.5 bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gray-300 transition-colors"
+              >
+                {systemLanguage === 'en-US' ? 'Close View' : systemLanguage === 'es-ES' ? 'Cerrar Vista' : 'Fechar Visualização'}
+              </button>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Star, Clock, Instagram, Phone, Mail, Menu, User, LogIn, X, ChevronLeft, ChevronRight, Home, ArrowRight } from 'lucide-react';
+import { Calendar, MapPin, Star, Clock, Instagram, Phone, Mail, Menu, User, LogIn, X, ChevronLeft, ChevronRight, Home, ArrowRight, DollarSign } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 // Importando as imagens, incluindo o logo e a foto de perfil da Annika
@@ -11,6 +11,10 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
 
   // Estados para gerenciar a abertura das telas (Modais) do Footer
   const [activeModal, setActiveModal] = useState(null); // 'quem-somos', 'faq', 'privacidade' ou null
+
+  // NOVOS ESTADOS: Controle do Modal de Detalhes do Serviço e seu Carrossel Interno
+  const [selectedService, setSelectedService] = useState(null);
+  const [currentServiceImageIndex, setCurrentServiceImageIndex] = useState(0);
 
   // Hook para alterar dinamicamente o ícone da guia do browser (Favicon)
   useEffect(() => {
@@ -41,17 +45,62 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
     setCurrentSlide((prev) => (prev === 0 ? CAROUSEL_IMAGES.length - 1 : prev - 1));
   };
 
+  // Funções de navegação do carrossel interno do Serviço
+  const nextServiceImage = (imagesLength) => {
+    setCurrentServiceImageIndex((prev) => (prev === imagesLength - 1 ? 0 : prev + 1));
+  };
+
+  const prevServiceImage = (imagesLength) => {
+    setCurrentServiceImageIndex((prev) => (prev === 0 ? imagesLength - 1 : prev - 1));
+  };
+
   // Mensagens do WhatsApp personalizadas
   const whatsappNumber = "5511945893227";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Olá, Annika! Gostaria de consultar os horários disponíveis e saber mais sobre seus atendimentos.")}`;
   const whatsappDevolucaoUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Olá! Gostaria de tirar uma dúvida sobre políticas de devolução e estorno de agendamentos.")}`;
 
+  // Lista de serviços com arrays de imagens simulando variações/trabalhos de portfólio de cada categoria
   const services = [
-    { id: '1', name: 'Manicure', description: 'Cuidado clássico para as unhas com esmaltação', price: 'R$ 50', duration: '45 min', image: SERVICE_IMAGES.manicure },
-    { id: '2', name: 'Pedicure', description: 'Tratamento relaxante para os pés', price: 'R$ 60', duration: '60 min', image: SERVICE_IMAGES.pedicure },
-    { id: '3', name: 'Unhas de Gel', description: 'Unhas em gel de longa durabilidade', price: 'R$ 120', duration: '90 min', image: SERVICE_IMAGES.gel },
-    { id: '4', name: 'Nail Art Design', description: 'Desenhos artísticos e personalizados', price: 'R$ 150', duration: '120 min', image: SERVICE_IMAGES.art },
-    { id: '5', name: 'Unhas de Acrílico', description: 'Alongamento profissional', price: 'R$ 180', duration: '120 min', image: SERVICE_IMAGES.acrylic },
+    { 
+      id: '1', 
+      name: 'Manicure', 
+      description: 'Cuidado clássico e detalhado para as unhas com cututilagem perfeita e esmaltação tradicional de alta cobertura.', 
+      price: 'R$ 50', 
+      duration: '45 min', 
+      images: [SERVICE_IMAGES.manicure, GALLERY_IMAGES[0] || SERVICE_IMAGES.manicure, GALLERY_IMAGES[3] || SERVICE_IMAGES.manicure] 
+    },
+    { 
+      id: '2', 
+      name: 'Pedicure', 
+      description: 'Tratamento relaxante focado na saúde e estética dos pés. Inclui esfoliação, hidratação profunda e acabamento impecável.', 
+      price: 'R$ 60', 
+      duration: '60 min', 
+      images: [SERVICE_IMAGES.pedicure, GALLERY_IMAGES[1] || SERVICE_IMAGES.pedicure] 
+    },
+    { 
+      id: '3', 
+      name: 'Unhas de Gel', 
+      description: 'Alongamento premium em gel moldado estruturado para oferecer máxima durabilidade, naturalidade e resistência no seu dia a dia.', 
+      price: 'R$ 120', 
+      duration: '90 min', 
+      images: [SERVICE_IMAGES.gel, GALLERY_IMAGES[5] || SERVICE_IMAGES.gel, GALLERY_IMAGES[2] || SERVICE_IMAGES.gel] 
+    },
+    { 
+      id: '4', 
+      name: 'Nail Art Design', 
+      description: 'Desenhos artísticos e personalizados feitos à mão. Aplicações exclusivas, pedrarias, encapsuladas e decorações modernas.', 
+      price: 'R$ 150', 
+      duration: '120 min', 
+      images: [SERVICE_IMAGES.art, GALLERY_IMAGES[4] || SERVICE_IMAGES.art, GALLERY_IMAGES[7] || SERVICE_IMAGES.art] 
+    },
+    { 
+      id: '5', 
+      name: 'Unhas de Acrílico', 
+      description: 'Alongamento profissional com a técnica de acrílico/porcelana. Perfeito para quem busca simetria impecável e alta dureza.', 
+      price: 'R$ 180', 
+      duration: '120 min', 
+      images: [SERVICE_IMAGES.acrylic, GALLERY_IMAGES[6] || SERVICE_IMAGES.acrylic] 
+    },
   ];
 
   const testimonials = [
@@ -126,7 +175,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                   <div className="w-10 h-10 bg-primary/15 rounded-full flex items-center justify-center"><LogIn size={20} /></div>
                   <div className="text-left flex-1">
                     <p className="font-medium">Área da Profissional</p>
-                    <p className="text-xs text-primary/70">Acesso administrative</p>
+                    <p className="text-xs text-primary/70">Acesso administrativo</p>
                   </div>
                 </button>
               </div>
@@ -214,21 +263,25 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
       <section className="px-5 py-16 bg-card border-y border-border" id="services">
         <div className="text-center mb-10">
           <h3 className="text-primary text-2xl mb-2 font-medium">Nossos Serviços</h3>
-          <p className="text-muted-foreground text-sm">Tratamentos premium para o cuidado das suas unhas</p>
+          <p className="text-muted-foreground text-sm">Tratamentos premium para o cuidado das suas unhas (clique para ver detalhes)</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
           {services.map((service) => (
             <div
               key={service.id}
+              onClick={() => {
+                setSelectedService(service);
+                setCurrentServiceImageIndex(0);
+              }}
               className="bg-background rounded-xl p-5 shadow-sm border border-border hover:border-primary/30 transition-all duration-300 flex gap-4 items-start group hover:scale-[1.03] active:scale-[1.01] hover:shadow-md cursor-pointer"
             >
               <div className="w-16 h-16 bg-card rounded-lg overflow-hidden flex-shrink-0 border border-border">
-                <img src={service.image} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <img src={service.images[0]} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
               </div>
               <div className="flex-1">
-                <h4 className="text-foreground font-medium mb-1">{service.name}</h4>
-                <p className="text-muted-foreground text-xs mb-3">{service.description}</p>
+                <h4 className="text-foreground font-medium mb-1 group-hover:text-primary transition-colors">{service.name}</h4>
+                <p className="text-muted-foreground text-xs mb-3 line-clamp-2">{service.description}</p>
                 <div className="flex justify-between items-center">
                   <p className="text-accent font-medium text-lg">{service.price}</p>
                   <div className="flex items-center gap-1 text-muted-foreground text-xs">
@@ -241,6 +294,106 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
           ))}
         </div>
       </section>
+
+      {/* MODAL DETALHADO DO SERVIÇO COM CARROSSEL INTERNO */}
+      {selectedService && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-2xl border border-border shadow-2xl overflow-hidden relative animate-fade-in">
+            
+            {/* Botão de Fechar */}
+            <button
+              onClick={() => setSelectedService(null)}
+              className="absolute right-3 top-3 z-30 p-1.5 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-xs transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Carrossel de Imagens do Serviço */}
+            <div className="relative h-64 w-full bg-black overflow-hidden border-b border-border">
+              {selectedService.images.map((imgUrl, idx) => (
+                <div
+                  key={idx}
+                  className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+                    idx === currentServiceImageIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                  }`}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`${selectedService.name} - slide ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+
+              {/* Setas de Controle */}
+              {selectedService.images.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); prevServiceImage(selectedService.images.length); }}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); nextServiceImage(selectedService.images.length); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </>
+              )}
+
+              {/* Indicadores de Paginação do Carrossel */}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+                {selectedService.images.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentServiceImageIndex(idx)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      idx === currentServiceImageIndex ? 'bg-accent w-4' : 'bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Detalhes Técnicos, Descrição e Preço */}
+            <div className="p-6 space-y-4">
+              <div>
+                <h3 className="text-xl font-bold text-foreground font-serif">{selectedService.name}</h3>
+                <div className="flex items-center gap-1.5 text-muted-foreground text-xs mt-1">
+                  <Clock size={14} className="text-primary" />
+                  <span>Duração estimada: <strong>{selectedService.duration}</strong></span>
+                </div>
+              </div>
+
+              <p className="text-muted-foreground text-sm leading-relaxed bg-background/50 p-3 rounded-xl border border-border/40">
+                {selectedService.description}
+              </p>
+
+              <div className="flex items-center justify-between bg-background p-4 rounded-xl border border-border">
+                <div className="flex items-center gap-2">
+                  <DollarSign size={18} className="text-emerald-600" />
+                  <span className="text-xs text-muted-foreground font-medium">Investimento</span>
+                </div>
+                <span className="text-xl font-bold text-emerald-600 font-sans">{selectedService.price}</span>
+              </div>
+
+              {/* Botão de Direcionamento para Agendamento */}
+              <button
+                onClick={() => {
+                  setSelectedService(null);
+                  onBookNow();
+                }}
+                className="w-full bg-accent hover:bg-accent/90 text-white font-medium py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm tracking-wide"
+              >
+                <Calendar size={16} />
+                <span>Agendar Este Serviço</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gallery Section */}
       <section className="px-5 py-16" id="gallery">
@@ -588,7 +741,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                     </p>
                   </div>
 
-                  {/* Lugares onde trabalhou & Trajetória */}
+                  {/* Trajetória */}
                   <div className="w-full text-left pt-2 space-y-1">
                     <h5 className="text-foreground font-medium border-b border-border/60 pb-1 text-xs uppercase tracking-wide text-primary">Trajetória Profissional</h5>
                     <p className="pt-1">
@@ -671,7 +824,7 @@ export function LandingPage({ onBookNow, onAdminLogin, onClientLogin }) {
                   <h5 className="text-foreground font-medium mt-3 mb-1">2. Uso dos Dados</h5>
                   <p>Seus dados são utilizados estritamente para confirmar seus horários, enviar lembretes automáticos de agendamento e emitir notas fiscais ou comprovantes de atendimento.</p>
 
-                  <h5 className="text-foreground font-medium mt-3 mb-1">3. Segurança</h5>
+                  <h5 className="text-foreground font-medium mt-3 mb-1">3. Security</h5>
                   <p>Não compartilhamos, vendemos ou expomos suas informações a terceiros. Todo o nosso sistema utiliza criptografia de ponta a ponta e servidores seguros na nuvem.</p>
                 </>
               )}

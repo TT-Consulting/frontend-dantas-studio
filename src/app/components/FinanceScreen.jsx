@@ -2,8 +2,40 @@ import { useState, useEffect } from 'react';
 import { ExpensesScreen } from './ExpensesScreen';
 import { ReceivablesScreen } from './ReceivablesScreen';
 import { financeAPI } from '../../api/finance'; // ◄ O único import necessário para a API financeira
+import { useLanguage } from '../../context/LanguageContext'; // 🌟 Importando o hook de idioma
+
+// Dicionário local para a tela de Finanças
+const localTranslations = {
+  'pt-BR': {
+    cardBilling: 'Faturamento Studio',
+    cardCosts: 'Custos Operacionais',
+    cardProfit: 'Lucro Líquido',
+    cardWithdrawals: 'Retiradas Pessoais',
+    tabExpenses: 'Despesas',
+    tabReceivables: 'Recebíveis'
+  },
+  'en-US': {
+    cardBilling: 'Studio Revenue',
+    cardCosts: 'Operating Costs',
+    cardProfit: 'Net Profit',
+    cardWithdrawals: 'Personal Withdrawals',
+    tabExpenses: 'Expenses',
+    tabReceivables: 'Receivables'
+  },
+  'es-ES': {
+    cardBilling: 'Facturación del Studio',
+    cardCosts: 'Costos Operativos',
+    cardProfit: 'Beneficio Neto',
+    cardWithdrawals: 'Retiros Personales',
+    tabExpenses: 'Gastos',
+    tabReceivables: 'Cuentas a Cobrar'
+  }
+};
 
 export function FinanceScreen() {
+  const { systemLanguage } = useLanguage(); // 🌟 Obtendo o idioma ativo globalmente
+  const text = localTranslations[systemLanguage] || localTranslations['pt-BR'];
+
   const [activeTab, setActiveTab] = useState('expenses');
   const [resumo, setResumo] = useState({
     totalReceitas: 0.0,
@@ -13,6 +45,16 @@ export function FinanceScreen() {
   });
   const [loading, setLoading] = useState(true);
   const [refreshCount, setRefreshCount] = useState(0);
+
+  // 🌟 Função para formatar a moeda dinamicamente conforme o idioma
+  const formatCurrency = (amount) => {
+    if (systemLanguage === 'en-US') {
+      return Number(amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    } else if (systemLanguage === 'es-ES') {
+      return Number(amount).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+    }
+    return Number(amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
 
   const handleTransactionChange = async () => {
     setRefreshCount(prev => prev + 1);
@@ -45,27 +87,27 @@ export function FinanceScreen() {
         {/* Cards Rápidos de Indicadores */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
-            <p className="text-xs text-gray-500 font-medium">Faturamento Studio</p>
+            <p className="text-xs text-gray-500 font-medium">{text.cardBilling}</p>
             <p className="text-lg font-bold text-gray-800">
-              R$ {resumo.totalReceitas.toFixed(2)}
+              {formatCurrency(resumo.totalReceitas)}
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-[#8A2BE2]">
-            <p className="text-xs text-gray-500 font-medium">Custos Operacionais</p>
+            <p className="text-xs text-gray-500 font-medium">{text.cardCosts}</p>
             <p className="text-lg font-bold text-gray-800">
-              R$ {resumo.custosOperacionais.toFixed(2)}
+              {formatCurrency(resumo.custosOperacionais)}
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-[#FF69B4]">
-            <p className="text-xs text-gray-500 font-medium">Lucro Líquido</p>
+            <p className="text-xs text-gray-500 font-medium">{text.cardProfit}</p>
             <p className="text-lg font-bold text-gray-800">
-              R$ {resumo.lucroLiquidoStudio.toFixed(2)}
+              {formatCurrency(resumo.lucroLiquidoStudio)}
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-400">
-            <p className="text-xs text-gray-500 font-medium">Retiradas Pessoais</p>
+            <p className="text-xs text-gray-500 font-medium">{text.cardWithdrawals}</p>
             <p className="text-lg font-bold text-gray-800">
-              R$ {resumo.retiradaPessoal.toFixed(2)}
+              {formatCurrency(resumo.retiradaPessoal)}
             </p>
           </div>
         </div>
@@ -80,7 +122,7 @@ export function FinanceScreen() {
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            Despesas
+            {text.tabExpenses}
           </button>
           <button
             onClick={() => setActiveTab('receivables')}
@@ -90,7 +132,7 @@ export function FinanceScreen() {
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            Recebíveis
+            {text.tabReceivables}
           </button>
         </div>
       </div>
