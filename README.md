@@ -1,16 +1,143 @@
-# React + Vite
+# Dantas Studio - Front-End (Versao 1.0)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Desenvolvido por TT Consulting.
 
-Currently, two official plugins are available:
+Este repositorio contem a interface web (UI/UX) do ecossistema Dantas Studio, focada em agendamento de servicos de estetica e gestao administrativa do salao.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Links Rapidos
 
-## React Compiler
+- Organizacao: https://github.com/TT-Consulting
+- Aplicacao em producao: https://annikadantas.agendaspro.app.br/
+- API Backend (AWS): http://18.215.117.254:8080
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Sobre o Projeto
 
-## Expanding the ESLint configuration
+O front-end do Dantas Studio conecta o cliente final ao estabelecimento de forma simples e rapida, alem de oferecer um painel administrativo para gerir agenda, clientes e financeiro.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Principais Funcionalidades
+
+- Agendamento multi-servicos com selecao de datas e horarios.
+- Suporte a idiomas via LanguageContext.
+- Painel administrativo com modulos de clientes, agenda, financeiro e configuracoes.
+- Interface responsiva para mobile e desktop.
+- Integracao REST com backend via Axios.
+
+## Tecnologias Utilizadas
+
+- React 18
+- Vite
+- Tailwind CSS v4
+- Axios
+- Radix UI e Lucide React
+- React Hook Form
+
+## Estrutura de Pastas (Atual)
+
+```text
+.
+├── arquivados/                    # Arquivos legados/backup
+├── build/                         # Saida de build de producao (Vite outDir)
+├── public/                        # Arquivos publicos estaticos
+├── src/
+│   ├── api/                       # Camada de integracao HTTP (axios + endpoints)
+│   │   ├── axiosConfig.js
+│   │   ├── bookings.js
+│   │   ├── clients.js
+│   │   ├── dashboard.js
+│   │   ├── finance.js
+│   │   ├── index.js
+│   │   ├── inventory.js
+│   │   ├── notes.js
+│   │   ├── services.js
+│   │   └── settings.js
+│   ├── app/
+│   │   ├── App.jsx                # Componente principal da aplicacao
+│   │   └── components/            # Telas e componentes de interface
+│   │       ├── settings/          # Subtelas de configuracao
+│   │       ├── ui/                # Biblioteca de componentes base
+│   │       └── figma/             # Componentes de suporte/importados
+│   ├── assets/                    # Imagens e midias
+│   ├── constants/                 # Constantes globais
+│   ├── context/                   # Contextos React (ex.: LanguageContext)
+│   ├── styles/                    # CSS global, tema e fontes
+│   └── main.jsx                   # Entry point do React
+├── .env                           # Variaveis de ambiente locais
+├── eslint.config.js               # Regras de lint
+├── index.html                     # Template HTML base
+├── package.json                   # Dependencias e scripts
+├── vite.config.js                 # Configuracao do Vite
+└── README.md
+```
+
+## Padroes de Codigo e Commits
+
+### React e JavaScript
+
+- PascalCase para componentes React (ex.: BookingScreen.jsx).
+- camelCase para funcoes, hooks e variaveis.
+- Context API para estados globais (ex.: idioma).
+
+### Conventional Commits
+
+- feat: nova funcionalidade
+- fix: correcao de bug
+- style: ajuste visual/CSS sem alterar logica
+- refactor: melhoria estrutural sem mudar comportamento
+- docs: atualizacao de documentacao
+
+Exemplo:
+
+```text
+feat(booking): add multi-service selection in client flow
+```
+
+## Configuracao e Execucao Local
+
+### Pre-requisitos
+
+- Node.js 18+
+- npm (ou yarn)
+
+### 1. Instalar dependencias
+
+```bash
+npm install
+```
+
+### 2. Configurar variaveis de ambiente
+
+Crie o arquivo .env na raiz do projeto:
+
+```env
+VITE_API_BASE_URL=http://18.215.117.254:8080
+VITE_API_WITH_CREDENTIALS=false
+```
+
+### 3. Rodar em desenvolvimento
+
+```bash
+npm run dev
+```
+
+Por padrao, o Vite esta configurado para subir em http://localhost:3000 e abrir o navegador automaticamente.
+
+## Build de Producao
+
+```bash
+npm run build
+```
+
+O output sera gerado na pasta build/ (conforme configuracao outDir no vite.config.js).
+
+Para deploy via FTP/WinSCP, envie o conteudo interno da pasta build/ para a raiz da hospedagem.
+
+## Scripts Disponiveis
+
+- npm run dev: inicia o servidor de desenvolvimento.
+- npm run build: gera a build de producao em build/.
+- npm run preview: serve localmente a build gerada.
+- npm run lint: executa ESLint no projeto.
+
+## Licenca
+
+© 2026 TT Consulting - Todos os direitos reservados.

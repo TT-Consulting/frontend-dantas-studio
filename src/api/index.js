@@ -60,15 +60,25 @@ export {
   alternarStatusMaterial
 } from './inventory';
 
-// 6. CONFIGURAÇÕES (Locais e Horários Comerciais - Mapeamento com Backend)
-export {
+// 6. LOACIS DE ATENDIMENTO (Filiais e Salas Físicas)
+export { 
   listarLocais,
+  buscarLocalPorId,
   salvarLocal,
   atualizarLocal,
-  alternarStatusLocal,
+  alternarStatusLocal
+} from './locals';
+
+// 7. HORÁRIOS COMERCIAIS (Horário de expediente, turnos e janelas de almoço)
+export { 
   listarHorarioComercial,
   salvarHorarioComercial,
   atualizarHorarioComercial,
+} from './hours';
+
+
+// 6. CONFIGURAÇÕES (Locais e Horários Comerciais - Mapeamento com Backend)
+export {
   obterConfiguracoes,
   salvarConfiguracoes,
   alternarTemaRapido,

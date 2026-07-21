@@ -2,6 +2,7 @@ import axios from 'axios';
 
 // Configure the base URL for your backend API (no trailing slash)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://18.215.117.254:8080';
 const WITH_CREDENTIALS = (import.meta.env.VITE_API_WITH_CREDENTIALS ?? 'false') === 'true';
 
 // Shared axios instance for the app
