@@ -54,7 +54,7 @@ import { LanguageProvider } from '../context/LanguageContext';
 import { obterConfiguracoes } from '../api';
 
 // 🚀 CONTROLE DE PRODUÇÃO
-const IS_MAINTENANCE_MODE = true;
+const IS_MAINTENANCE_MODE = false;
 
 export default function App() {
   const [appMode, setAppMode] = useState('landing');
