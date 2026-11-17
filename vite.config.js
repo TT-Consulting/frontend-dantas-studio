@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
     ],
-  resolve: {
+    resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
         'vaul@1.1.2': 'vaul',
@@ -57,17 +57,16 @@ export default defineConfig(({ mode }) => {
         '@radix-ui/react-accordion@1.2.3': '@radix-ui/react-accordion',
         '@': path.resolve(__dirname, './src'),
       },
-  },
-  build: {
-    target: 'esnext',
-    outDir: 'build',
-  },
+    },
+    build: {
+      target: 'esnext',
+      outDir: 'build',
+    },
     server: {
       port: 3000,
       open: true,
       // Dev-time proxy to avoid CORS issues when calling the remote backend
       proxy: {
-        // proxy core resource roots used by the frontend to the API backend
         '/clientes': { target: API_BASE, changeOrigin: true, secure: false },
         '/agendamentos': { target: API_BASE, changeOrigin: true, secure: false },
         '/servicos': { target: API_BASE, changeOrigin: true, secure: false },
@@ -75,7 +74,7 @@ export default defineConfig(({ mode }) => {
         '/estoque': { target: API_BASE, changeOrigin: true, secure: false },
         '/financeiro': { target: API_BASE, changeOrigin: true, secure: false },
         '/horarios': { target: API_BASE, changeOrigin: true, secure: false },
-        '/clientes': { target: API_BASE, changeOrigin: true, secure: false },
+        '/configuracoes': { target: API_BASE, changeOrigin: true, secure: false },
       },
     },
   };
