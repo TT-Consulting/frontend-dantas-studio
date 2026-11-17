@@ -1,14 +1,19 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+export default defineConfig(({ mode }) => {
+  // Load VITE_ env vars so we can reuse VITE_API_BASE_URL here for the dev proxy
+  const env = loadEnv(mode, process.cwd(), '');
+  const API_BASE = env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+    ],
   resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
@@ -57,8 +62,21 @@ export default defineConfig({
     target: 'esnext',
     outDir: 'build',
   },
-  server: {
-    port: 3000,
-    open: true,
-  },
+    server: {
+      port: 3000,
+      open: true,
+      // Dev-time proxy to avoid CORS issues when calling the remote backend
+      proxy: {
+        // proxy core resource roots used by the frontend to the API backend
+        '/clientes': { target: API_BASE, changeOrigin: true, secure: false },
+        '/agendamentos': { target: API_BASE, changeOrigin: true, secure: false },
+        '/servicos': { target: API_BASE, changeOrigin: true, secure: false },
+        '/locais': { target: API_BASE, changeOrigin: true, secure: false },
+        '/estoque': { target: API_BASE, changeOrigin: true, secure: false },
+        '/financeiro': { target: API_BASE, changeOrigin: true, secure: false },
+        '/horarios': { target: API_BASE, changeOrigin: true, secure: false },
+        '/clientes': { target: API_BASE, changeOrigin: true, secure: false },
+      },
+    },
+  };
 });

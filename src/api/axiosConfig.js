@@ -8,7 +8,7 @@ const WITH_CREDENTIALS = (import.meta.env.VITE_API_WITH_CREDENTIALS ?? 'false') 
 // Shared axios instance for the app
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },

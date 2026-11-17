@@ -58,3 +58,17 @@ export const alternarStatusLocal = (id, ativar = true) =>
       console.error(`❌ Erro ao alterar status operacional do local ${id}:`, err);
       throw err;
     });
+
+/**
+ * GET /locais/{id}
+ * Retorna os detalhes de um local pelo seu ID.
+ * @param {number|string} id - ID único do local.
+ */
+export const buscarLocalPorId = (id) =>
+  apiClient
+    .get(`/locais/${id}`)
+    .then((res) => res.data)
+    .catch((err) => {
+      console.error(`❌ Erro ao buscar local ${id}:`, err);
+      throw err;
+    });
