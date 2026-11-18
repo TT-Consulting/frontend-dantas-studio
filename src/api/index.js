@@ -88,6 +88,12 @@ export {
   exportarDadosBanco
 } from './settings';
 
-// 7. CONFIGURAÇÃO DO AXIOS
+// 7. AUTENTICAÇÃO E USUÁRIOS
+export {
+  realizarLogin,
+  registrarUsuario
+} from './auth';
+
+// 8. CONFIGURAÇÃO DO AXIOS
 export { apiClient } from './axiosConfig';
 export { default as apiClientDefault } from './axiosConfig';
