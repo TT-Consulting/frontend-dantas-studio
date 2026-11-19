@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { realizarLogin, registrarUsuario } from '../../services';
+import { realizarLogin, registrarUsuario } from '../../../api';
 import loginImage from '../../assets/PNG/galery/nail_galery_1.png';
 import signupImage from '../../assets/PNG/services/nail_hand_service_3.png';
 
