@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, MapPin, Phone, ArrowLeft, UserPlus, Loader, HeartPulse, Home, Filter, User, X, ExternalLink, DollarSign } from 'lucide-react';
-import { salvarCliente, atualizarCliente, apiClient, buscarAgendamentosPorCliente, buscarAgendamentoPorId, listarLocais, listarServicosAtivos } from '../../api';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, MapPin, Phone, ArrowLeft, Loader, HeartPulse, Home, Filter, User, X, ExternalLink, DollarSign } from 'lucide-react';
+import { ClientAuthScreen } from './ClientAuthScreen';
+import { salvarCliente, atualizarCliente, autenticarCliente, buscarAgendamentosPorCliente, buscarAgendamentoPorId, listarLocais, listarServicosAtivos } from '../../api';
 
 const toNumber = (...values) => {
   for (const value of values) {
@@ -239,55 +240,48 @@ export function ClientPortal({ onBack, initialClientData }) {
 
   // Login automático
   useEffect(() => {
-    if (initialClientData?.email || initialClientData?.phone) {
-      const loginAutomatico = async () => {
-        try {
-          let clientes = [];
-          if (initialClientData.phone) {
-            const telefoneLimpo = initialClientData.phone.replace(/\D/g, '');
-            const res = await apiClient.get('/clientes', { params: { whatsapp: telefoneLimpo } });
-            clientes = res.data || [];
-          } else if (initialClientData.email) {
-            const res = await apiClient.get('/clientes');
-            clientes = (res.data || []).filter(c => c.email?.toLowerCase() === initialClientData.email.toLowerCase());
-          }
+    const identificador = initialClientData?.phone || initialClientData?.email;
+    if (!identificador) return;
 
-          if (clientes && clientes.length > 0) {
-            direcionarFluxoCliente(clientes[0]);
-          }
-        } catch (err) {
-          console.error("Erro no login automático:", err);
-        }
-      };
-      loginAutomatico();
-    }
+    const loginAutomatico = async () => {
+      try {
+        const cliente = await autenticarCliente(identificador);
+        direcionarFluxoCliente(cliente);
+      } catch (err) {
+        // Sem cadastro, inativo ou duplicado: segue para a tela de login normal
+        console.warn('Login automático não realizado:', err?.response?.status || err);
+      }
+    };
+    loginAutomatico();
   }, [initialClientData]);
 
   // Login Manual
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError(null);
+
+    const identificador = (email || phone).trim();
+    if (!identificador) {
+      setLoginError('⚠️ Informe seu WhatsApp ou e-mail.');
+      return;
+    }
+
     try {
-      let clientes = [];
-      const inputLimpo = (email || phone).trim();
-
-      if (inputLimpo.includes('@')) {
-        const res = await apiClient.get('/clientes');
-        clientes = (res.data || []).filter(c => c.email?.toLowerCase() === inputLimpo.toLowerCase());
-      } else {
-        const telefoneLimpo = inputLimpo.replace(/\D/g, '');
-        const res = await apiClient.get('/clientes', { params: { whatsapp: telefoneLimpo } });
-        clientes = res.data || [];
-      }
-
-      if (clientes && clientes.length > 0) {
-        direcionarFluxoCliente(clientes[0]);
-      } else {
-        setLoginError('⚠️ Cliente não encontrado. Verifique os dados ou realize o Cadastro Rápido.');
-      }
+      const cliente = await autenticarCliente(identificador);
+      direcionarFluxoCliente(cliente);
     } catch (err) {
-      console.error(err);
-      setLoginError('❌ Erro ao conectar ao servidor. Tente novamente mais tarde.');
+      const status = err?.response?.status;
+      if (status === 404) {
+        setLoginError('⚠️ Cliente não encontrado. Verifique os dados ou realize o Cadastro Rápido.');
+      } else if (status === 403) {
+        setLoginError('🚫 Este cadastro está inativo. Entre em contato com o studio.');
+      } else if (status === 409) {
+        setLoginError('⚠️ Há mais de um cadastro com esse dado. Entre com o seu e-mail ou fale com o studio.');
+      } else if (status === 400) {
+        setLoginError('⚠️ Informe um e-mail válido ou um WhatsApp com DDD.');
+      } else {
+        setLoginError('❌ Erro ao conectar ao servidor. Tente novamente mais tarde.');
+      }
     }
   };
 
@@ -577,66 +571,23 @@ export function ClientPortal({ onBack, initialClientData }) {
     );
   };
 
-  if (!isLoggedIn && showQuickRegister) {
+  if (!isLoggedIn) {
     return (
       <>
-        <div className="min-h-screen bg-gray-50">
-          <div className="bg-white px-5 py-4 shadow-sm">
-            <button onClick={() => setShowQuickRegister(false)} className="flex items-center gap-2 text-primary hover:text-accent transition-colors">
-              <ArrowLeft size={20} />
-              <span>Voltar</span>
-            </button>
-          </div>
-          <div className="px-5 pt-12">
-            <div className="max-w-md mx-auto">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UserPlus className="text-accent" size={32} />
-                </div>
-                <h2 className="text-primary text-2xl mb-2">Cadastro Rápido</h2>
-                <p className="text-gray-600 text-sm">Crie sua conta no sistema para começar</p>
-              </div>
-              <form onSubmit={handleQuickRegister} className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600 mb-2 block">Nome Completo *</label>
-                  <input
-                    type="text"
-                    value={registerData.name}
-                    onChange={(e) => handleRegisterChange('name', e.target.value)}
-                    placeholder="Seu nome completo"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 mb-2 block">E-mail *</label>
-                  <input
-                    type="email"
-                    value={registerData.email}
-                    onChange={(e) => handleRegisterChange('email', e.target.value)}
-                    placeholder="seu@email.com"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 mb-2 block">WhatsApp *</label>
-                  <input
-                    type="tel"
-                    value={registerData.phone}
-                    onChange={(e) => handleRegisterChange('phone', e.target.value)}
-                    placeholder="(11) 98765-4321"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-                <button type="submit" className="w-full bg-accent text-white py-4 rounded-xl shadow-lg hover:shadow-xl transition-all font-medium">
-                  Criar Conta
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
+        <ClientAuthScreen
+          showRegister={showQuickRegister}
+          onShowRegisterChange={setShowQuickRegister}
+          onBack={onBack}
+          loginError={loginError}
+          onIdentifierChange={(val) => {
+            if (val.includes('@')) { setEmail(val); setPhone(''); }
+            else { setPhone(val); setEmail(''); }
+          }}
+          onLogin={handleLogin}
+          registerData={registerData}
+          onRegisterChange={handleRegisterChange}
+          onRegister={handleQuickRegister}
+        />
         <Toast />
       </>
     );
@@ -813,56 +764,6 @@ export function ClientPortal({ onBack, initialClientData }) {
     );
   }
 
-  if (!isLoggedIn) {
-    return (
-      <>
-        <div className="min-h-screen bg-gray-50">
-          <div className="bg-white px-5 py-4 shadow-sm">
-            <button onClick={onBack} className="flex items-center gap-2 text-primary hover:text-accent transition-colors">
-              <ArrowLeft size={20} />
-              <span>Voltar</span>
-            </button>
-          </div>
-          <div className="px-5 pt-12">
-            <div className="max-w-md mx-auto">
-              <div className="text-center mb-8">
-                <h2 className="text-primary text-2xl mb-2">Área do Cliente</h2>
-                <p className="text-gray-600 text-sm">Insira seus dados para acessar</p>
-              </div>
-              {loginError && <div className="mb-4 p-4 bg-red-50 text-red-700 border border-red-200 text-sm rounded-xl">{loginError}</div>}
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600 mb-2 block">WhatsApp ou E-mail</label>
-                  <input
-                    type="text"
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.includes('@')) { setEmail(val); setPhone(''); }
-                      else { setPhone(val); setEmail(''); }
-                    }}
-                    placeholder="Seu e-mail ou WhatsApp cadastrado"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-                <button type="submit" className="w-full bg-accent text-white py-4 rounded-xl shadow-lg hover:shadow-xl transition-all font-semibold">
-                  Acessar Portal
-                </button>
-              </form>
-              <div className="mt-8 p-4 bg-purple-50 rounded-xl text-center">
-                <p className="text-gray-600 text-sm mb-4"><strong>Primeira vez por aqui?</strong> Faça o cadastro rápido.</p>
-                <button onClick={() => setShowQuickRegister(true)} className="w-full bg-primary text-white py-3 rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
-                  Realizar Cadastro Rápido
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <Toast />
-      </>
-    );
-  }
-
   return (
     <>
       <div className="min-h-screen bg-gray-50">
@@ -875,7 +776,7 @@ export function ClientPortal({ onBack, initialClientData }) {
             <button onClick={() => setShowAnamesis(true)} className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-semibold hover:bg-primary/20">
               Editar Meu Perfil / Ficha
             </button>
-            <button onClick={() => { setIsLoggedIn(false); setCurrentClient(null); setAppointments([]); }} className="text-gray-500 text-sm hover:text-primary transition-colors px-2">
+            <button onClick={() => { setIsLoggedIn(false); setCurrentClient(null); setAppointments([]); setEmail(''); setPhone(''); setShowAnamesis(false); setSelectedAppointment(null); }} className="text-gray-500 text-sm hover:text-primary transition-colors px-2">
               Sair
             </button>
           </div>
