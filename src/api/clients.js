@@ -29,6 +29,22 @@ export const buscarClientePorId = (id) =>
     });
 
 /**
+ * POST /clientes/login
+ * Autentica o cliente pelo e-mail ou WhatsApp (correspondência exata). Devolve só o cadastro dele.
+ * Erros HTTP: 400 dado inválido, 404 não encontrado, 403 cadastro inativo, 409 cadastro duplicado.
+ * @param {string} identificador - E-mail ou WhatsApp informado pelo cliente.
+ */
+export const autenticarCliente = (identificador) =>
+  apiClient
+    .post('/clientes/login', { identificador })
+    .then((res) => res.data)
+    .catch((err) => {
+      const status = err?.response?.status;
+      if (!status || status >= 500) console.error('❌ Erro ao autenticar cliente:', err);
+      throw err;
+    });
+
+/**
  * POST /clientes
  * Salva e registra um novo cliente no banco de dados do sistema.
  * @param {Object} clienteDTO - Objeto contendo os dados pessoais e ficha inicial de anamnese do cliente.
