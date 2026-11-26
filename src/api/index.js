@@ -15,6 +15,7 @@ export {
 export { 
   listarClientes, 
   buscarClientePorId, 
+  autenticarCliente,
   salvarCliente, 
   atualizarCliente, 
   alternarStatusCliente,

@@ -14,7 +14,7 @@ export const listarAgendamentos = (filtros = {}) =>
       throw err;
     });
 
-/**
+/***
  * GET /agendamentos/agenda
  * Realiza uma listagem inteligente filtrada por intervalo de datas.
  * Se nenhum parâmetro for informado, o backend retorna por padrão os próximos 7 dias.
